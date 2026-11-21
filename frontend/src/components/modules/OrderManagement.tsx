@@ -3,8 +3,13 @@ import {
   Search,
   Filter,
   Plus,
-  Eye,
   X,
+  Edit3,
+  Trash2,
+  ShieldAlert,
+  ShieldCheck,
+  CheckCircle2,
+  Truck,
 } from 'lucide-react';
 import { LogisticsApi } from '../../lib/api';
 import type { SalesOrder, OrderStatus, ServiceTier } from '../../types/logistics';
@@ -16,10 +21,12 @@ export function OrderManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [sodAlert, setSodAlert] = useState<string | null>(null);
   const [bannerMessage, setBannerMessage] = useState<string | null>(null);
 
-  // New order form state
+  // New order form
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newServiceTier, setNewServiceTier] = useState<ServiceTier>('Standard');
   const [newOriginWarehouse, setNewOriginWarehouse] = useState('WH-JKT-CENTRAL');
@@ -28,6 +35,13 @@ export function OrderManagement() {
   const [newAddress, setNewAddress] = useState('');
   const [newSku, setNewSku] = useState('MED-VAC-001');
   const [newQty, setNewQty] = useState(10);
+
+  // Edit order form
+  const [editCustomerName, setEditCustomerName] = useState('');
+  const [editRecipientName, setEditRecipientName] = useState('');
+  const [editCity, setEditCity] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [editNotes, setEditNotes] = useState('');
 
   useEffect(() => {
     loadOrders();
@@ -43,15 +57,71 @@ export function OrderManagement() {
     setIsDrawerOpen(true);
   };
 
+  const handleOpenEdit = (order: SalesOrder) => {
+    setSelectedOrder(order);
+    setEditCustomerName(order.customer_name);
+    setEditRecipientName(order.delivery_address.recipient_name);
+    setEditCity(order.delivery_address.city);
+    setEditAddress(order.delivery_address.street);
+    setEditNotes(order.notes || '');
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedOrder) return;
+    setActionLoading(true);
+    try {
+      const updated = await LogisticsApi.updateOrder(selectedOrder.id, {
+        customer_name: editCustomerName,
+        delivery_address: {
+          ...selectedOrder.delivery_address,
+          recipient_name: editRecipientName,
+          street: editAddress,
+          city: editCity,
+        },
+        notes: editNotes,
+      });
+      setOrders((prev) => prev.map((o) => (o.id === selectedOrder.id ? updated : o)));
+      setSelectedOrder(updated);
+      setIsEditModalOpen(false);
+      setBannerMessage(`✅ Successfully updated details for ${updated.order_number}`);
+    } catch (err: any) {
+      setBannerMessage(`❌ Failed to update order: ${err.message}`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!confirm('Are you sure you want to cancel and delete this order? Reserved stock will be automatically released.')) return;
+    setActionLoading(true);
+    try {
+      const cancelled = await LogisticsApi.deleteOrder(orderId);
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? cancelled : o)));
+      if (selectedOrder?.id === orderId) setSelectedOrder(cancelled);
+      setBannerMessage(`🗑️ Order ${cancelled.order_number} cancelled and stock reservation released.`);
+    } catch (err: any) {
+      setBannerMessage(`❌ Cancellation failed: ${err.message}`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleReserveStock = async (orderId: string) => {
     setActionLoading(true);
+    setSodAlert(null);
     try {
       const updated = await LogisticsApi.reserveStock(orderId);
       setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
       setSelectedOrder(updated);
       setBannerMessage(`✅ Inventory reserved atomically for ${updated.order_number}`);
     } catch (err: any) {
-      setBannerMessage(`❌ Failed to reserve stock: ${err.message}`);
+      if (err.message && err.message.includes('SoD Violation')) {
+        setSodAlert(err.message);
+      } else {
+        setBannerMessage(`❌ Failed to reserve stock: ${err.message}`);
+      }
     } finally {
       setActionLoading(false);
     }
@@ -59,13 +129,18 @@ export function OrderManagement() {
 
   const handleTransitionStatus = async (orderId: string, nextStatus: OrderStatus) => {
     setActionLoading(true);
+    setSodAlert(null);
     try {
       const updated = await LogisticsApi.transitionStatus(orderId, nextStatus);
       setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
       setSelectedOrder(updated);
       setBannerMessage(`✅ Order transitioned to ${nextStatus}`);
     } catch (err: any) {
-      setBannerMessage(`❌ Transition failed: ${err.message}`);
+      if (err.message && err.message.includes('SoD Violation')) {
+        setSodAlert(err.message);
+      } else {
+        setBannerMessage(`❌ Transition failed: ${err.message}`);
+      }
     } finally {
       setActionLoading(false);
     }
@@ -75,45 +150,42 @@ export function OrderManagement() {
     e.preventDefault();
     if (!newCustomerName || !newRecipientName) return;
 
-    const newOrder: SalesOrder = {
-      id: crypto.randomUUID(),
-      order_number: `ORD-20261122-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
-      customer_id: 'CUST-NEW-01',
-      customer_name: newCustomerName,
-      items: [
-        {
-          item_id: crypto.randomUUID(),
-          sku: newSku,
-          name: newSku === 'MED-VAC-001' ? 'Bio-Pharmaceutical Vaccine Pack' : 'Edge Hardware Unit',
-          quantity: Number(newQty),
-          unit_price: 350000,
-          weight_kg: 0.8,
-          volume_cbm: 0.002,
+    try {
+      const created = await LogisticsApi.createOrder({
+        customer_id: 'CUST-NEW-01',
+        customer_name: newCustomerName,
+        items: [
+          {
+            item_id: crypto.randomUUID(),
+            sku: newSku,
+            name: newSku === 'MED-VAC-001' ? 'Bio-Pharmaceutical Vaccine Pack (-20C)' : 'Enterprise Edge Gateway Server',
+            quantity: Number(newQty),
+            unit_price: newSku === 'MED-VAC-001' ? 350000 : 18500000,
+            weight_kg: 0.8,
+            volume_cbm: 0.002,
+          },
+        ],
+        service_tier: newServiceTier,
+        origin_warehouse_id: newOriginWarehouse,
+        delivery_address: {
+          recipient_name: newRecipientName,
+          phone: '+62 812-3344-5566',
+          street: newAddress || 'Jl. Gatot Subroto No. 8',
+          city: newCity,
+          province: 'DKI Jakarta',
+          postal_code: '12930',
+          latitude: -6.2,
+          longitude: 106.8,
         },
-      ],
-      status: 'Draft',
-      service_tier: newServiceTier,
-      origin_warehouse_id: newOriginWarehouse,
-      delivery_address: {
-        recipient_name: newRecipientName,
-        phone: '+62 812-3344-5566',
-        street: newAddress || 'Jl. Gatot Subroto No. 8',
-        city: newCity,
-        province: 'Jawa',
-        postal_code: '12930',
-        latitude: -6.2,
-        longitude: 106.8,
-      },
-      tracking_number: `TRK-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-      total_amount: Number(newQty) * 350000,
-      total_weight_kg: Number(newQty) * 0.8,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+        notes: 'Created via ELGS Order Management Console',
+      });
 
-    setOrders([newOrder, ...orders]);
-    setIsCreateModalOpen(false);
-    setBannerMessage(`✅ New Sales Order ${newOrder.order_number} created in Draft status`);
+      setOrders([created, ...orders]);
+      setIsCreateModalOpen(false);
+      setBannerMessage(`✅ Sales Order ${created.order_number} created in Draft status`);
+    } catch (err: any) {
+      setBannerMessage(`❌ Failed to create order: ${err.message}`);
+    }
   };
 
   const filteredOrders = orders.filter((o) => {
@@ -147,6 +219,29 @@ export function OrderManagement() {
 
   return (
     <div className="space-y-6">
+      {/* SoD Violation Callout Banner */}
+      {sodAlert && (
+        <div className="flex items-start justify-between rounded-xl border border-destructive/40 bg-destructive/15 p-4 text-xs text-destructive shadow-md animate-in slide-in-from-top-2">
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="h-5 w-5 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold">Segregation of Duties (SoD) Interception</p>
+              <p className="mt-0.5 text-muted-foreground">{sodAlert}</p>
+              <p className="mt-1 text-[11px] font-semibold text-foreground">
+                Tip: Use the persona switcher in the top navigation to switch to Alexander Hartono (SuperAdmin) or an independent manager to approve!
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSodAlert(null)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Banner message alert */}
       {bannerMessage && (
         <div className="flex items-center justify-between rounded-xl border border-border bg-card p-3.5 text-xs text-foreground shadow-sm">
@@ -164,7 +259,6 @@ export function OrderManagement() {
       {/* Action Header & Filter Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex flex-1 items-center gap-3">
-          {/* Search */}
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <input
@@ -176,7 +270,6 @@ export function OrderManagement() {
             />
           </div>
 
-          {/* Status Filter */}
           <div className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs text-card-foreground">
             <Filter className="h-3.5 w-3.5 text-muted-foreground" />
             <label htmlFor="filter-status-select" className="sr-only">Filter by Status</label>
@@ -190,9 +283,11 @@ export function OrderManagement() {
               <option value="Draft" className="bg-card text-card-foreground">Draft</option>
               <option value="InventoryReserved" className="bg-card text-card-foreground">Inventory Reserved</option>
               <option value="Picking" className="bg-card text-card-foreground">Picking</option>
+              <option value="Packed" className="bg-card text-card-foreground">Packed</option>
               <option value="Dispatched" className="bg-card text-card-foreground">Dispatched</option>
               <option value="InTransit" className="bg-card text-card-foreground">In Transit</option>
               <option value="Delivered" className="bg-card text-card-foreground">Delivered</option>
+              <option value="Cancelled" className="bg-card text-card-foreground">Cancelled</option>
             </select>
           </div>
         </div>
@@ -220,7 +315,7 @@ export function OrderManagement() {
                 <th className="py-3 px-4 font-semibold">Status</th>
                 <th className="py-3 px-4 font-semibold">Total Amount</th>
                 <th className="py-3 px-4 font-semibold">Weight</th>
-                <th className="py-3 px-4 font-semibold text-right">Action</th>
+                <th className="py-3 px-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60 text-card-foreground">
@@ -255,16 +350,24 @@ export function OrderManagement() {
                     {order.total_weight_kg} kg
                   </td>
                   <td className="py-3.5 px-4 text-right">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRowClick(order);
-                      }}
-                      className="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(order)}
+                        title="Edit Order"
+                        className="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      >
+                        <Edit3 className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteOrder(order.id)}
+                        title="Cancel Order"
+                        className="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-destructive/20 hover:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -293,7 +396,7 @@ export function OrderManagement() {
               </button>
             </div>
 
-            {/* Lifecycle Progression Stepper */}
+            {/* Stepper */}
             <div className="space-y-2">
               <span className="text-xs font-semibold text-muted-foreground">Fulfillment Stage</span>
               <div className="flex items-center gap-1.5">
@@ -318,7 +421,7 @@ export function OrderManagement() {
               </div>
             </div>
 
-            {/* Order Attributes */}
+            {/* Attributes */}
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="rounded-xl border border-border bg-background/50 p-3">
                 <span className="text-muted-foreground">Customer</span>
@@ -375,7 +478,7 @@ export function OrderManagement() {
 
             {/* State Machine Transition Actions */}
             <div className="pt-4 border-t border-border space-y-2">
-              <span className="text-xs font-semibold text-muted-foreground">State Transitions</span>
+              <span className="text-xs font-semibold text-muted-foreground">Dual-Control Actions</span>
               <div className="flex flex-wrap gap-2">
                 {selectedOrder.status === 'Draft' && (
                   <button
@@ -384,7 +487,7 @@ export function OrderManagement() {
                     onClick={() => handleReserveStock(selectedOrder.id)}
                     className="flex-1 rounded-xl bg-primary py-2.5 px-3 text-xs font-bold text-primary-foreground shadow hover:opacity-90"
                   >
-                    Reserve Warehouse Stock
+                    Reserve Warehouse Stock (Maker-Checker)
                   </button>
                 )}
 
@@ -439,11 +542,100 @@ export function OrderManagement() {
                     onClick={() => handleTransitionStatus(selectedOrder.id, 'Delivered')}
                     className="flex-1 rounded-xl bg-emerald-600 py-2.5 px-3 text-xs font-bold text-white shadow hover:opacity-90"
                   >
-                    Complete Delivery (PoD)
+                    Sign Electronic PoD (Delivered)
                   </button>
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Order Modal */}
+      {isEditModalOpen && selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <h3 className="text-base font-bold text-card-foreground">
+                Edit Order: {selectedOrder.order_number}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="rounded-lg p-1 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateOrder} className="space-y-3 text-xs">
+              <div>
+                <label className="font-semibold text-foreground">Customer Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editCustomerName}
+                  onChange={(e) => setEditCustomerName(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-foreground">Recipient Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editRecipientName}
+                  onChange={(e) => setEditRecipientName(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-foreground">Destination City &amp; Street</label>
+                <input
+                  type="text"
+                  required
+                  value={editCity}
+                  onChange={(e) => setEditCity(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <input
+                  type="text"
+                  required
+                  value={editAddress}
+                  onChange={(e) => setEditAddress(e.target.value)}
+                  className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-foreground">Logistics Instructions</label>
+                <input
+                  type="text"
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="rounded-xl border border-border bg-card px-4 py-2 font-medium text-foreground hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="rounded-xl bg-primary px-4 py-2 font-bold text-primary-foreground shadow hover:opacity-90"
+                >
+                  Save Modifications
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -483,9 +675,9 @@ export function OrderManagement() {
                     onChange={(e) => setNewServiceTier(e.target.value as ServiceTier)}
                     className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="Standard">Standard</option>
-                    <option value="Express">Express</option>
-                    <option value="ColdChainPriority">Cold-Chain Priority (-20°C)</option>
+                    <option value="Standard">Standard Freight</option>
+                    <option value="Express">Express Air (1.5x)</option>
+                    <option value="ColdChainPriority">Cold-Chain Cryo (-20°C)</option>
                   </select>
                 </div>
               </div>
@@ -498,7 +690,7 @@ export function OrderManagement() {
                     onChange={(e) => setNewOriginWarehouse(e.target.value)}
                     className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="WH-JKT-CENTRAL">Jakarta Central</option>
+                    <option value="WH-JKT-CENTRAL">Jakarta Central Hub</option>
                     <option value="WH-SBY-EAST">Surabaya Gateway</option>
                     <option value="WH-BDG-WEST">Bandung Crossdock</option>
                   </select>
@@ -512,7 +704,6 @@ export function OrderManagement() {
                   >
                     <option value="MED-VAC-001">MED-VAC-001 (Vaccine Pack)</option>
                     <option value="ELEC-SRV-042">ELEC-SRV-042 (Edge Server)</option>
-                    <option value="IND-SOL-109">IND-SOL-109 (Solar Inverter)</option>
                   </select>
                 </div>
               </div>

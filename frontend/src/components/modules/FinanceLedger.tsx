@@ -4,6 +4,10 @@ import {
   Receipt,
   Snowflake,
   Zap,
+  Plus,
+  ShieldAlert,
+  CheckCircle2,
+  X,
 } from 'lucide-react';
 import { LogisticsApi } from '../../lib/api';
 import type {
@@ -25,11 +29,23 @@ export function FinanceLedger() {
   const [quote, setQuote] = useState<ShippingRateQuoteResponse | null>(null);
   const [calculating, setCalculating] = useState(false);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [sodError, setSodError] = useState<string | null>(null);
+  const [banner, setBanner] = useState<string | null>(null);
+
+  // New invoice form
+  const [invCustomer, setInvCustomer] = useState('PT Kimia Farma Diagnostics');
+  const [invAmount, setInvAmount] = useState(50000000);
 
   useEffect(() => {
     handleCalculate();
-    LogisticsApi.listInvoices().then(setInvoices);
+    loadInvoices();
   }, []);
+
+  const loadInvoices = async () => {
+    const list = await LogisticsApi.listInvoices();
+    setInvoices(list);
+  };
 
   const handleCalculate = async () => {
     setCalculating(true);
@@ -48,8 +64,76 @@ export function FinanceLedger() {
     setCalculating(false);
   };
 
+  const handleCreateInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const inv = await LogisticsApi.createInvoice({
+        order_id: crypto.randomUUID(),
+        customer_id: 'CUST-ENTERPRISE-01',
+        customer_name: invCustomer,
+        subtotal: Number(invAmount),
+      });
+      setInvoices([inv, ...invoices]);
+      setIsInvoiceModalOpen(false);
+      setBanner(`✅ Invoice ${inv.invoice_number} created with 11% PPN tax calculation.`);
+    } catch (err: any) {
+      setBanner(`❌ Failed to create invoice: ${err.message}`);
+    }
+  };
+
+  const handleSettleInvoice = async (invoiceId: string) => {
+    setSodError(null);
+    try {
+      const settled = await LogisticsApi.settleInvoice(invoiceId);
+      setInvoices((prev) => prev.map((i) => (i.invoice_id === invoiceId ? settled : i)));
+      setBanner(`✅ Invoice ${settled.invoice_number} verified and settled.`);
+    } catch (err: any) {
+      if (err.message && err.message.includes('SoD Violation')) {
+        setSodError(err.message);
+      } else {
+        setBanner(`❌ Settlement failed: ${err.message}`);
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* SoD Alert */}
+      {sodError && (
+        <div className="flex items-start justify-between rounded-xl border border-destructive/40 bg-destructive/15 p-4 text-xs text-destructive shadow-md">
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="h-5 w-5 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold">Finance Dual Control SoD Interception</p>
+              <p className="mt-0.5 text-muted-foreground">{sodError}</p>
+              <p className="mt-1 text-[11px] font-semibold text-foreground">
+                Tip: Switch active persona in top navigation to Evelyn Wijaya (Finance Auditor) or SuperAdmin to settle!
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSodError(null)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {banner && (
+        <div className="flex items-center justify-between rounded-xl border border-border bg-card p-3.5 text-xs text-foreground shadow-sm">
+          <span>{banner}</span>
+          <button
+            type="button"
+            onClick={() => setBanner(null)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Freight Tariff Calculation Engine */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4 lg:col-span-2">
@@ -137,7 +221,6 @@ export function FinanceLedger() {
             </div>
           </div>
 
-          {/* Surcharge Switches */}
           <div className="flex flex-wrap items-center gap-6 pt-2 text-xs">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -238,7 +321,17 @@ export function FinanceLedger() {
             <Receipt className="h-4 w-4 text-primary" />
             <h3 className="text-sm font-bold text-card-foreground">Invoicing &amp; Accounts Ledger</h3>
           </div>
-          <span className="text-xs text-muted-foreground font-mono">{invoices.length} Invoices</span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsInvoiceModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow hover:opacity-90"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Issue Invoice</span>
+            </button>
+            <span className="text-xs text-muted-foreground font-mono">{invoices.length} Invoices</span>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -251,7 +344,7 @@ export function FinanceLedger() {
                 <th className="py-3 px-4 font-semibold">Tax (11% PPN)</th>
                 <th className="py-3 px-4 font-semibold">Total Amount</th>
                 <th className="py-3 px-4 font-semibold">Status</th>
-                <th className="py-3 px-4 font-semibold">Due Date</th>
+                <th className="py-3 px-4 font-semibold text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60 text-card-foreground">
@@ -283,8 +376,16 @@ export function FinanceLedger() {
                       {inv.status}
                     </span>
                   </td>
-                  <td className="py-3.5 px-4 font-mono text-muted-foreground">
-                    {new Date(inv.due_date).toLocaleDateString()}
+                  <td className="py-3.5 px-4 text-right">
+                    {inv.status !== 'Paid' && (
+                      <button
+                        type="button"
+                        onClick={() => handleSettleInvoice(inv.invoice_id)}
+                        className="rounded-lg bg-emerald-600 px-3 py-1 text-[11px] font-bold text-white shadow hover:opacity-90"
+                      >
+                        Settle (Dual Control)
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -292,6 +393,68 @@ export function FinanceLedger() {
           </table>
         </div>
       </div>
+
+      {/* Issue Invoice Modal */}
+      {isInvoiceModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <h3 className="text-base font-bold text-card-foreground">Issue Customer Invoice</h3>
+              <button
+                type="button"
+                onClick={() => setIsInvoiceModalOpen(false)}
+                className="rounded-lg p-1 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateInvoice} className="space-y-3 text-xs">
+              <div>
+                <label className="font-semibold text-foreground">Billed Entity</label>
+                <input
+                  type="text"
+                  required
+                  value={invCustomer}
+                  onChange={(e) => setInvCustomer(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-foreground">Subtotal Amount (IDR)</label>
+                <input
+                  type="number"
+                  min="100000"
+                  step="100000"
+                  value={invAmount}
+                  onChange={(e) => setInvAmount(Number(e.target.value))}
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <p className="mt-1 text-[10px] text-muted-foreground font-mono">
+                  Calculated Tax (11% PPN): Rp {(invAmount * 0.11).toLocaleString()} &bull; Total: Rp {(invAmount * 1.11).toLocaleString()}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setIsInvoiceModalOpen(false)}
+                  className="rounded-xl border border-border bg-card px-4 py-2 font-medium text-foreground hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-primary px-4 py-2 font-bold text-primary-foreground shadow hover:opacity-90"
+                >
+                  Issue Invoice
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

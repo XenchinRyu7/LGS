@@ -7,9 +7,10 @@ import {
   AlertOctagon,
   Send,
   X,
+  Plus,
 } from 'lucide-react';
 import { LogisticsApi } from '../../lib/api';
-import type { Vehicle, Driver } from '../../types/logistics';
+import type { Vehicle, Driver, VehicleType } from '../../types/logistics';
 
 export function FleetDispatch() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -17,13 +18,69 @@ export function FleetDispatch() {
   const [selectedDriver, setSelectedDriver] = useState<string>('DRV-101');
   const [selectedVehicle, setSelectedVehicle] = useState<string>('VH-REEFER-01');
   const [banner, setBanner] = useState<string | null>(null);
+  const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
+  const [isDriverModalOpen, setIsDriverModalOpen] = useState(false);
+
+  // New vehicle form
+  const [newVehicleId, setNewVehicleId] = useState('');
+  const [newPlate, setNewPlate] = useState('');
+  const [newType, setNewType] = useState<VehicleType>('ElectricVan');
+  const [newPayload, setNewPayload] = useState(1500);
+
+  // New driver form
+  const [newDriverId, setNewDriverId] = useState('');
+  const [newDriverName, setNewDriverName] = useState('');
+  const [newDriverPhone, setNewDriverPhone] = useState('+62 812-');
+  const [newLicense, setNewLicense] = useState('B2 Umum (Heavy)');
 
   useEffect(() => {
-    LogisticsApi.listFleet().then((res) => {
-      setVehicles(res.vehicles);
-      setDrivers(res.drivers);
-    });
+    loadFleet();
   }, []);
+
+  const loadFleet = async () => {
+    const res = await LogisticsApi.listFleet();
+    setVehicles(res.vehicles);
+    setDrivers(res.drivers);
+  };
+
+  const handleCreateVehicle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVehicleId || !newPlate) return;
+    try {
+      const v = await LogisticsApi.createVehicle({
+        id: newVehicleId,
+        license_plate: newPlate,
+        vehicle_type: newType,
+        max_payload_kg: Number(newPayload),
+        fuel_battery_level_percent: 100,
+        current_lat: -6.2088,
+        current_lng: 106.8456,
+      });
+      setVehicles([...vehicles, v]);
+      setIsVehicleModalOpen(false);
+      setBanner(`✅ Fleet vehicle ${v.license_plate} (${v.id}) registered.`);
+    } catch (err: any) {
+      setBanner(`❌ Failed to add vehicle: ${err.message}`);
+    }
+  };
+
+  const handleCreateDriver = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDriverId || !newDriverName) return;
+    try {
+      const d = await LogisticsApi.createDriver({
+        id: newDriverId,
+        name: newDriverName,
+        phone: newDriverPhone,
+        license_type: newLicense,
+      });
+      setDrivers([...drivers, d]);
+      setIsDriverModalOpen(false);
+      setBanner(`✅ Driver ${d.name} (${d.id}) enrolled in roster.`);
+    } catch (err: any) {
+      setBanner(`❌ Failed to enroll driver: ${err.message}`);
+    }
+  };
 
   const handleDispatch = () => {
     setBanner(`🚀 Route dispatched: Vehicle ${selectedVehicle} paired with Driver ${selectedDriver}`);
@@ -52,9 +109,24 @@ export function FleetDispatch() {
             <h3 className="text-sm font-bold text-card-foreground">Active Fleet Units</h3>
             <p className="text-xs text-muted-foreground">Payload allocation and battery/fuel index</p>
           </div>
-          <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-500">
-            {vehicles.length} Units Online
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsVehicleModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow hover:opacity-90"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Add Vehicle</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsDriverModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Enroll Driver</span>
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -86,7 +158,6 @@ export function FleetDispatch() {
                   </span>
                 </div>
 
-                {/* Payload Meter */}
                 <div className="space-y-1.5 text-xs">
                   <div className="flex justify-between text-muted-foreground">
                     <span>Cargo Payload</span>
@@ -99,7 +170,6 @@ export function FleetDispatch() {
                   </div>
                 </div>
 
-                {/* Battery & Odometer */}
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border text-xs">
                   <div className="flex items-center gap-1.5 text-muted-foreground">
                     <BatteryCharging className="h-3.5 w-3.5 text-emerald-400" />
@@ -216,6 +286,176 @@ export function FleetDispatch() {
           </div>
         </div>
       </div>
+
+      {/* Add Vehicle Modal */}
+      {isVehicleModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <h3 className="text-base font-bold text-card-foreground">Register Fleet Vehicle</h3>
+              <button
+                type="button"
+                onClick={() => setIsVehicleModalOpen(false)}
+                className="rounded-lg p-1 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateVehicle} className="space-y-3 text-xs">
+              <div>
+                <label className="font-semibold text-foreground">Vehicle Code</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. VH-EVAN-05"
+                  value={newVehicleId}
+                  onChange={(e) => setNewVehicleId(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-foreground">License Plate</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. B 8899 EV"
+                  value={newPlate}
+                  onChange={(e) => setNewPlate(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-foreground">Vehicle Category</label>
+                  <select
+                    value={newType}
+                    onChange={(e) => setNewType(e.target.value as VehicleType)}
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="ElectricVan">Electric Van (EV)</option>
+                    <option value="ReeferColdTruck">Reefer Cold Truck (-20°C)</option>
+                    <option value="HeavyDutyTrailer">Heavy Duty Trailer</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-semibold text-foreground">Max Payload (kg)</label>
+                  <input
+                    type="number"
+                    min="100"
+                    value={newPayload}
+                    onChange={(e) => setNewPayload(Number(e.target.value))}
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setIsVehicleModalOpen(false)}
+                  className="rounded-xl border border-border bg-card px-4 py-2 font-medium text-foreground hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-primary px-4 py-2 font-bold text-primary-foreground shadow hover:opacity-90"
+                >
+                  Register Vehicle
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Enroll Driver Modal */}
+      {isDriverModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <h3 className="text-base font-bold text-card-foreground">Enroll Commercial Driver</h3>
+              <button
+                type="button"
+                onClick={() => setIsDriverModalOpen(false)}
+                className="rounded-lg p-1 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateDriver} className="space-y-3 text-xs">
+              <div>
+                <label className="font-semibold text-foreground">Driver ID</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. DRV-105"
+                  value={newDriverId}
+                  onChange={(e) => setNewDriverId(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-foreground">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Hendro Suwito"
+                  value={newDriverName}
+                  onChange={(e) => setNewDriverName(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-foreground">Phone Number</label>
+                  <input
+                    type="text"
+                    required
+                    value={newDriverPhone}
+                    onChange={(e) => setNewDriverPhone(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-foreground">Commercial License</label>
+                  <select
+                    value={newLicense}
+                    onChange={(e) => setNewLicense(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="B2 Umum (Heavy)">B2 Umum (Heavy Trailer)</option>
+                    <option value="B1 (Commercial Truck)">B1 (Commercial Truck)</option>
+                    <option value="A (Commercial Light)">A (Commercial Light Van)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setIsDriverModalOpen(false)}
+                  className="rounded-xl border border-border bg-card px-4 py-2 font-medium text-foreground hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-primary px-4 py-2 font-bold text-primary-foreground shadow hover:opacity-90"
+                >
+                  Enroll Driver
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,78 +1,133 @@
-# 🌐 NexusLogistics Enterprise LMS (Logistics Management System)
+# 🌐 ELGS — Ethereal Logistics Management System (Enterprise Edition)
 
-An ultra-modern, production-grade, distributed enterprise logistics management system designed for multi-tier supply chain operations, fulfillment automation, fleet dispatch telematics, and dynamic freight financial ledgers.
+[![Rust](https://img.shields.io/badge/Rust-Axum%200.7%20Tokio-orange?style=flat-square&logo=rust)](https://www.rust-lang.org/)
+[![Astro](https://img.shields.io/badge/Astro-5.0-bc52ee?style=flat-square&logo=astro)](https://astro.build/)
+[![Ethereal UI](https://img.shields.io/badge/Design%20System-Ethereal%20UI-38bdf8?style=flat-square)](https://ethereal-ui.dev)
+[![Compliance](https://img.shields.io/badge/Compliance-SOC--2%20%7C%20SoD%20Enforced-green?style=flat-square)](https://www.aicpa.org/soc4so)
+[![Database](https://img.shields.io/badge/Database-Supabase%20%2B%20Upstash-blue?style=flat-square)](https://supabase.com)
 
----
-
-## 🏗️ Architecture Blueprint
-
-```
-                      NexusLogistics Core System
-                                  │
-      ┌───────────────────────────┼───────────────────────────┐
-      │                           │                           │
-ORDER & FULFILLMENT         MULTI-WAREHOUSE             FLEET & DISPATCH
-      │                           │                           │
-- Sales Order Lifecycle     - Multi-facility Zones      - Fleet & Telematics
-- Inventory Reservation     - Rack/Shelf/Bin Tracking   - Dynamic Route Planning
-- Picking & Packing Waves   - Stock Opname Audits       - Real-time GPS Tracking
-- Return & Reverse Logistics- Inter-facility Transfers  - Proof of Delivery (PoD)
-      │                           │                           │
-      └───────────────────────────┼───────────────────────────┘
-                                  │
-                      FINANCE & TARIFF ENGINE
-                                  │
-                    - Dimensional Weight Tariffs
-                    - Automated Invoicing & Ledger
-                    - Real-time Analytics & KPIs
-```
-
-## 🛠️ Technology Stack
-
-- **Backend (Rust)**:
-  - Framework: [Axum](https://github.com/tokio-rs/axum) with Tokio multi-threaded asynchronous runtime.
-  - Concurrency: Atomic state machines, concurrent reservation pools with lock-free reading and write isolation.
-  - Domain Modeling: Strict DDD (Domain-Driven Design), Event Sourcing principles, Invariant guards.
-  - Telemetry: Tracing subscriber, structured logging, latency profiling.
-- **Frontend (Astro & Ethereal UI)**:
-  - Framework: [Astro 5](https://astro.build) with React islands (`@astrojs/react`).
-  - Design System: **Ethereal UI** (`@etherealui/react`) dark-first telemetry components.
-  - Styling: Pure **Tailwind CSS v4** `@theme inline` design tokens.
-  - Theming Engine: 870+ OKLCH Community Theme support, zero-runtime React Context overhead, 100% WCAG AA contrast safeguards (`text-primary-foreground` on `bg-primary`).
-- **Quality Assurance & CI/CD**:
-  - Git Hooks: [Husky](https://typicode.github.io/husky/) + `lint-staged`.
-  - Backend Tests: Unit tests for domain state machine invariants, concurrency tests for stock reservation, API integration tests.
-  - Frontend Tests: Vitest component and logic tests.
+**ELGS (Ethereal Logistics Management System)** is an enterprise-grade, mission-critical distributed logistics and cold-chain supply chain operating system. Engineered with **Astro 5 + Ethereal UI** on the frontend and an asynchronous **Rust Axum + Tokio** engine on the backend, ELGS enforces strict **Role-Based Access Control (RBAC)**, **Segregation of Duties (SoD) Maker-Checker governance**, and an immutable cryptographic **SOC-2 Type II Audit Trail**.
 
 ---
 
-## 🚀 Quick Start
+## 🏗️ Architectural Overview
 
-### 1. Prerequisites
-- Node.js >= 20 & pnpm >= 9
-- Rust toolchain (`cargo`, `rustc` >= 1.80)
+```
+                                  ELGS Core Engine
+                                         │
+     ┌───────────────────────────┬───────┴───────────────────┬───────────────────────────┐
+     │                           │                           │                           │
+ORDER & DISPATCH            WAREHOUSE & STOCK           FLEET TELEMATICS            FINANCIAL LEDGER
+- Dynamic Order Lifecycle   - Multi-zone Facility Hubs  - Live GPS & Cryo Sensors   - IATA Air Freight Tariffs
+- SoD Maker-Checker Gates   - Sub-zero Cold Vaults      - Driver Fatigue Guard      - Settle Dual-Control
+- Full CRUD API / Modals    - Dual-Control Opname       - Route Dispatch Queue      - Automated Invoicing
+     │                           │                           │                           │
+     └───────────────────────────┼───────────────────────────┼───────────────────────────┘
+                                 │
+     ┌───────────────────────────┴───────────────────────────┐
+     │                                                       │
+  RBAC PERSONAS & PERMISSIONS            SOC-2 COMPLIANCE AUDIT TRAIL
+  - SuperAdmin (Alexander H.)             - SHA-256 HMAC Signatures
+  - LogisticsManager (Diana P.)           - Non-Repudiation Immutable Ledger
+  - WarehouseOperator (Farhan M.)         - Dual-Sign-Off Verification
+  - FleetDispatcher (Satria W.)           - Segregation of Duties (SoD) Trap
+  - FinanceAuditor (Evelyn W.)
+```
 
-### 2. Installation
+---
+
+## 🔐 Enterprise Governance: RBAC, SoD, & SOC-2
+
+### 1. Role-Based Access Control (RBAC) Matrix
+ELGS features 5 switchable personas in the navbar selector:
+| Persona | Role | Permissions |
+|---|---|---|
+| **Alexander Hartono** | `SuperAdmin` | Full Wildcard access (`*`) — Bypass, configuration, user management |
+| **Diana Permata** | `LogisticsManager` | Create/Cancel orders, approve inventory, submit opname, view finance |
+| **Farhan Maulana** | `WarehouseOperator` | Create opname counts, view orders/inventory, cold-storage telemetry |
+| **Satria Wibowo** | `FleetDispatcher` | Assign routes, view driver status, track fleet telematics |
+| **Evelyn Wijaya** | `FinanceAuditor` | Issue freight invoices, dual-control settle invoices, view audit ledger |
+
+### 2. Segregation of Duties (SoD) Enforced Rules
+- **Order Maker-Checker Rule**: The user who created a sales order (`created_by`) is strictly prohibited from approving inventory reservation for that same order, unless authorized as `SuperAdmin`.
+- **Stock Opname Dual-Control**: Physical stock audit count sheets submitted by an operator cannot be reconciled/approved by that same operator.
+- **Invoice Settlement Control**: Invoices issued by an auditor cannot be settled by the same user without dual-party authorization.
+
+### 3. SOC-2 Type II Cryptographic Audit Trail
+- Every mutation (`CREATE_ORDER`, `RESERVE_INVENTORY`, `DISPATCH_VEHICLE`, `STOCK_OPNAME`, `SETTLE_INVOICE`) records an immutable audit log.
+- Entries feature an actor ID, role, client IP, payload snapshot, timestamp, and SHA-256 cryptographic signature.
+- Attempted SoD violations are logged with `is_sod_violation: true` for audit scrutiny.
+
+---
+
+## 🗄️ Database & Cache Infrastructure (Supabase & Upstash)
+
+Configure your production or staging database credentials in `.env` (copied from `.env.example`):
+
 ```bash
-# Install root workspace dependencies
-pnpm install
+# Supabase PostgreSQL (Port 5432 or 6543 pooler)
+SUPABASE_URL="https://your-project-ref.supabase.co"
+SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+DATABASE_URL="postgres://postgres.your-project-ref:your-db-password@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 
-# Install frontend dependencies
+# Upstash Serverless Redis (Distributed locks & live telemetry)
+UPSTASH_REDIS_REST_URL="https://your-upstash-instance.upstash.io"
+UPSTASH_REDIS_REST_TOKEN="AX...YourToken..."
+REDIS_URL="rediss://default:your-token@your-upstash-instance.upstash.io:6379"
+```
+
+A complete SQL migration script with 9 enterprise tables, constraints, foreign keys, and indexes is provided at:
+👉 `backend/migrations/0001_init_elgs_schema.sql`
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- **Node.js** >= 20.x & **pnpm** >= 9.x
+- **Rust** toolchain (`rustc`, `cargo` >= 1.80)
+
+### 1. Installation
+```bash
+# Install workspace and frontend dependencies
+pnpm install
 cd frontend && pnpm install && cd ..
 ```
 
-### 3. Running Services
+### 2. Run in Development
 ```bash
 # Run both Backend & Frontend concurrently
 pnpm dev
 
-# Or run separately:
-pnpm dev:backend   # Rust backend on http://127.0.0.1:8080
-pnpm dev:frontend  # Astro frontend on http://localhost:4321
+# Or start individually:
+pnpm dev:backend   # Rust Axum backend on http://127.0.0.1:8080
+pnpm dev:frontend  # Astro 5 frontend on http://localhost:4321
 ```
 
-### 4. Running Verification Tests
+### 3. Running Enterprise Test Suites
 ```bash
-# Run all tests (Rust domain invariants + Frontend components)
+# Runs full Rust domain tests + Vitest frontend suite (Husky pre-commit enforces this)
 pnpm test
 ```
+
+### 4. Production Release Builds
+```bash
+pnpm run build:backend   # Compiles optimized Rust binary (target/release/elgs-backend)
+pnpm run build:frontend  # Compiles Astro 5 static + SSR output (frontend/dist/)
+```
+
+---
+
+## 🧪 Verified Test Suites
+- **Rust Backend**:
+  - `tests/order_lifecycle_test.rs` — 3 tests (transitions, state machine validation, invariant guards)
+  - `tests/tariff_and_finance_test.rs` — 2 tests (IATA dimensional weight calculation, invoice generation)
+  - `tests/concurrency_stock_test.rs` — Concurrency testing under multi-threaded allocation
+  - `tests/api_integration_test.rs` — 3 Axum integration tests
+  - `tests/rbac_and_sod_test.rs` — 3 tests enforcing RBAC permissions and SoD Maker-Checker violations
+- **Frontend Vitest**:
+  - `frontend/src/tests/theme_switcher.test.tsx` — Dynamic OKLCH theme switching & DOM link verification
+  - `frontend/src/tests/order_management.test.tsx` — Order rendering, CRUD modals, and status badges
+  - `frontend/src/tests/tariff_calculator.test.ts` — Dimensional weight calculation algorithms
+  - `frontend/src/tests/audit_trail_and_rbac.test.tsx` — SOC-2 compliance audit log rendering & SoD violation inspection

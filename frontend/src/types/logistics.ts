@@ -1,3 +1,34 @@
+export type UserRole =
+  | 'SuperAdmin'
+  | 'LogisticsManager'
+  | 'WarehouseOperator'
+  | 'FleetDispatcher'
+  | 'FinanceAuditor'
+  | 'Driver';
+
+export interface AuthUser {
+  user_id: string;
+  full_name: string;
+  email: string;
+  role: UserRole;
+  department: string;
+}
+
+export interface AuditRecord {
+  audit_id: string;
+  actor_id: string;
+  actor_name: string;
+  actor_role: string;
+  action: string;
+  resource_type: string;
+  resource_id: string;
+  before_state?: string;
+  after_state?: string;
+  ip_address: string;
+  hash_signature: string;
+  timestamp: string;
+}
+
 export type OrderStatus =
   | 'Draft'
   | 'Confirmed'
@@ -48,6 +79,8 @@ export interface SalesOrder {
   tracking_number: string;
   total_amount: number;
   total_weight_kg: number;
+  created_by?: string;
+  approved_by?: string;
   notes?: string;
   created_at: string;
   updated_at: string;
@@ -77,6 +110,20 @@ export interface WarehouseStock {
   reserved: number;
   zone: StorageZone;
   unit_weight_kg: number;
+}
+
+export interface StockOpnameAudit {
+  audit_id: string;
+  warehouse_id: string;
+  sku: string;
+  system_count: number;
+  physical_count: number;
+  discrepancy: number;
+  counted_by: string;
+  approved_by?: string;
+  status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  notes?: string;
+  timestamp: string;
 }
 
 export type VehicleType = 'MotorcycleCargo' | 'ElectricVan' | 'ReeferColdTruck' | 'HeavyDutyTrailer';
@@ -175,6 +222,8 @@ export interface Invoice {
   tax_amount: number;
   total_amount: number;
   status: 'Draft' | 'Issued' | 'Paid' | 'Overdue' | 'Cancelled';
+  created_by?: string;
+  settled_by?: string;
   due_date: string;
   created_at: string;
 }

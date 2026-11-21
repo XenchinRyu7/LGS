@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import {
   Boxes,
-  Activity,
   Bell,
   CheckCircle2,
   AlertTriangle,
   Radio,
   Cpu,
+  UserCheck,
+  Database,
+  X,
 } from 'lucide-react';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { LogisticsApi } from '../lib/api';
+import type { AuthUser, UserRole } from '../types/logistics';
 
 interface Notification {
   id: string;
@@ -21,52 +24,49 @@ interface Notification {
 }
 
 export function AppNavbar() {
-  const [backendStatus, setBackendStatus] = useState<'connected' | 'checking' | 'fallback'>('checking');
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [isDbModalOpen, setIsDbModalOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([
     {
       id: '1',
-      title: 'Cold Vault Compliance -20.2°C',
-      message: 'WH-JKT-CENTRAL vaccine zone operating in nominal cryo range.',
+      title: 'Cryo-Vault Compliance Verified',
+      message: 'WH-JKT-CENTRAL vaccine zone operating at nominal -20.2°C.',
       type: 'success',
-      time: '4m ago',
+      time: '2m ago',
       read: false,
     },
     {
       id: '2',
-      title: 'Fleet Dispatch Notice',
-      message: 'Reefer Truck VH-REEFER-01 dispatched to Rasuna Said corridor.',
+      title: 'SoD Boundary Guard Active',
+      message: 'Dual-control maker-checker rules active for sales orders & opname reconciliations.',
       type: 'info',
-      time: '12m ago',
+      time: '10m ago',
       read: false,
     },
     {
       id: '3',
-      title: 'Express Order Created',
-      message: 'Telkom Data Infrastructure requested 20x Edge Servers.',
+      title: 'Stock Opname Pending Sign-Off',
+      message: 'Variance of +50 units on MED-VAC-001 waiting for independent manager review.',
       type: 'warning',
-      time: '28m ago',
+      time: '25m ago',
       read: false,
     },
   ]);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   useEffect(() => {
-    LogisticsApi.getHealth()
-      .then((res) => {
-        if (res.status === 'healthy') {
-          setBackendStatus('connected');
-        } else {
-          setBackendStatus('fallback');
-        }
-      })
-      .catch(() => setBackendStatus('fallback'));
+    LogisticsApi.getCurrentUser().then((data) => {
+      setCurrentUser(data.user);
+    });
   }, []);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  const handleRoleChange = async (role: UserRole) => {
+    const res = await LogisticsApi.switchRole(role);
+    setCurrentUser(res.user);
+    window.dispatchEvent(new CustomEvent('elgs:role-changed', { detail: res.user }));
   };
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-card/85 backdrop-blur-md">
@@ -79,40 +79,57 @@ export function AppNavbar() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-base font-extrabold tracking-tight text-foreground">
-                Nexus<span className="text-primary">Logistics</span>
+                ELGS<span className="text-primary font-normal text-xs ml-1.5 hidden sm:inline">&bull; Ethereal Logistics Management System</span>
               </span>
-              <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                Enterprise v2.0
+              <span className="rounded-md bg-primary/15 border border-primary/20 px-1.5 py-0.5 text-[10px] font-bold text-primary tracking-wider">
+                ENTERPRISE
               </span>
             </div>
             <p className="text-[11px] text-muted-foreground hidden sm:block">
-              Distributed Logistics Management &amp; Cryo-Telemetry Engine
+              Distributed Logistics &bull; RBAC &bull; SoD Maker-Checker &bull; SOC-2 Audit
             </p>
           </div>
         </div>
 
-        {/* Status, Theme Switcher & Actions */}
-        <div className="flex items-center gap-3 sm:gap-4">
-          {/* Backend Status Pill */}
-          <div className="hidden md:flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-xs">
-            <Cpu className="h-3.5 w-3.5 text-primary" />
-            <span className="text-muted-foreground font-medium">Rust Engine:</span>
-            <span className="flex items-center gap-1 font-semibold text-foreground">
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  backendStatus === 'connected'
-                    ? 'bg-emerald-500 animate-pulse'
-                    : 'bg-amber-500'
-                }`}
-              />
-              {backendStatus === 'connected' ? 'Axum Online' : 'Active (Local)'}
-            </span>
-          </div>
+        {/* Status, RBAC Switcher, Theme Switcher & Actions */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          {/* Supabase & Upstash DB Monitor Pill */}
+          <button
+            type="button"
+            onClick={() => setIsDbModalOpen(true)}
+            className="hidden lg:flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground hover:border-primary/50 transition-colors"
+            title="Database & Redis Layer Status"
+          >
+            <Database className="h-3.5 w-3.5 text-primary" />
+            <span className="font-semibold text-foreground">Supabase &bull; Upstash</span>
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          </button>
 
-          {/* Theme Switcher Component */}
+          {/* Active RBAC Role Switcher */}
+          {currentUser && (
+            <div className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-2.5 py-1 text-xs">
+              <UserCheck className="h-3.5 w-3.5 text-primary" />
+              <label htmlFor="rbac-role-select" className="sr-only">Active RBAC Role</label>
+              <select
+                id="rbac-role-select"
+                value={currentUser.role}
+                onChange={(e) => handleRoleChange(e.target.value as UserRole)}
+                className="bg-transparent text-xs font-bold text-foreground focus:outline-none cursor-pointer"
+                title="Switch session persona to test SoD maker-checker boundaries"
+              >
+                <option value="SuperAdmin" className="bg-card text-card-foreground">Alexander H. (SuperAdmin)</option>
+                <option value="LogisticsManager" className="bg-card text-card-foreground">Diana P. (LogisticsManager)</option>
+                <option value="WarehouseOperator" className="bg-card text-card-foreground">Farhan M. (WarehouseOperator)</option>
+                <option value="FleetDispatcher" className="bg-card text-card-foreground">Satria W. (FleetDispatcher)</option>
+                <option value="FinanceAuditor" className="bg-card text-card-foreground">Evelyn W. (FinanceAuditor)</option>
+              </select>
+            </div>
+          )}
+
+          {/* Theme Switcher */}
           <ThemeSwitcher />
 
-          {/* Notification Center Popover */}
+          {/* Notification Center */}
           <div className="relative">
             <button
               type="button"
@@ -134,18 +151,16 @@ export function AppNavbar() {
                   <div className="flex items-center gap-2">
                     <Radio className="h-4 w-4 text-primary animate-pulse" />
                     <span className="text-xs font-bold text-card-foreground">
-                      Telemetry &amp; Ops Feeds
+                      Operational &amp; SoD Feeds
                     </span>
                   </div>
-                  {unreadCount > 0 && (
-                    <button
-                      type="button"
-                      onClick={markAllAsRead}
-                      className="text-[11px] text-primary hover:underline font-medium"
-                    >
-                      Mark all read
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))}
+                    className="text-[11px] text-primary hover:underline font-medium"
+                  >
+                    Mark all read
+                  </button>
                 </div>
 
                 <div className="divide-y divide-border/60 max-h-72 overflow-y-auto my-2">
@@ -163,7 +178,7 @@ export function AppNavbar() {
                         <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                       )}
                       {item.type === 'info' && (
-                        <Activity className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                        <Cpu className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                       )}
                       <div className="flex-1 text-xs">
                         <div className="flex items-center justify-between">
@@ -175,17 +190,76 @@ export function AppNavbar() {
                     </div>
                   ))}
                 </div>
-
-                <div className="pt-2 border-t border-border text-center">
-                  <span className="text-[10px] text-muted-foreground">
-                    Telemetry connected to Axum backend event bus
-                  </span>
-                </div>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Cloud Database & Redis Topology Dialog */}
+      {isDbModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Database className="h-5 w-5 text-primary" />
+                <h3 className="text-base font-bold text-card-foreground">
+                  Cloud Infrastructure Topology
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDbModalOpen(false)}
+                className="rounded-lg p-1 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-foreground">Supabase PostgreSQL 15+</span>
+                  <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 font-bold text-emerald-400">
+                    Schema Ready (0001_init)
+                  </span>
+                </div>
+                <p className="text-muted-foreground">
+                  Stores persistent ACID transactions, IAM users, role permissions, sales orders, inventory, and SOC-2 immutable audit trails.
+                </p>
+                <code className="block rounded bg-background p-2 font-mono text-[11px] text-primary break-all">
+                  DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres
+                </code>
+              </div>
+
+              <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-foreground">Upstash Redis &amp; Locks</span>
+                  <span className="rounded-full bg-cyan-500/20 px-2.5 py-0.5 font-bold text-cyan-400">
+                    Configured
+                  </span>
+                </div>
+                <p className="text-muted-foreground">
+                  Manages high-throughput distributed locks for atomic stock reservation, real-time GPS telemetry feeds, and fast session tokens.
+                </p>
+                <code className="block rounded bg-background p-2 font-mono text-[11px] text-cyan-400 break-all">
+                  UPSTASH_REDIS_REST_URL=https://[INSTANCE].upstash.io
+                </code>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-border flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsDbModalOpen(false)}
+                className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow hover:opacity-90"
+              >
+                Close Topology
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

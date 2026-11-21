@@ -11,6 +11,12 @@ import type {
   ExecutiveAnalyticsSummary,
   ThroughputPoint,
   OrderStatus,
+  AuthUser,
+  UserRole,
+  AuditRecord,
+  StockOpnameAudit,
+  StorageZone,
+  VehicleType,
 } from '../types/logistics';
 
 const API_BASE = 'http://localhost:8080/api/v1';
@@ -22,7 +28,141 @@ export const LogisticsApi = {
       if (!res.ok) throw new Error('Health check failed');
       return await res.json();
     } catch {
-      return { status: 'mock_active', service: 'NexusLogistics Telemetry Hub' };
+      return { status: 'mock_active', service: 'ELGS — Ethereal Logistics Engine' };
+    }
+  },
+
+  // IAM & RBAC
+  async getCurrentUser(): Promise<{ user: AuthUser; permissions: string[] }> {
+    try {
+      const res = await fetch(`${API_BASE}/auth/me`);
+      if (!res.ok) throw new Error('Failed to fetch session user');
+      return await res.json();
+    } catch {
+      return {
+        user: {
+          user_id: '00000000-0000-4000-8000-000000000001',
+          full_name: 'Alexander Hartono (Super Admin)',
+          email: 'alexander.hartono@elgs.enterprise.id',
+          role: 'SuperAdmin',
+          department: 'Enterprise Operations',
+        },
+        permissions: ['OrderRead', 'OrderCreate', 'OrderUpdate', 'OrderDelete', 'OrderApprove', 'OrderReserve', 'OrderTransition', 'WarehouseRead', 'WarehouseManage', 'StockOpnameSubmit', 'StockOpnameApprove', 'FleetRead', 'FleetManage', 'RouteDispatch', 'PodSubmit', 'FinanceRead', 'InvoiceCreate', 'InvoiceSettle', 'AuditTrailRead', 'SecurityAdmin'],
+      };
+    }
+  },
+
+  async switchRole(role: UserRole): Promise<{ user: AuthUser; permissions: string[]; message: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/auth/switch-role`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+      });
+      if (!res.ok) throw new Error('Failed to switch role');
+      return await res.json();
+    } catch {
+      const mockRoles: Record<UserRole, AuthUser> = {
+        SuperAdmin: {
+          user_id: '00000000-0000-4000-8000-000000000001',
+          full_name: 'Alexander Hartono (Super Admin)',
+          email: 'alexander.hartono@elgs.enterprise.id',
+          role: 'SuperAdmin',
+          department: 'Enterprise Operations',
+        },
+        LogisticsManager: {
+          user_id: '00000000-0000-4000-8000-000000000002',
+          full_name: 'Diana Puspita (Logistics Manager)',
+          email: 'diana.puspita@elgs.enterprise.id',
+          role: 'LogisticsManager',
+          department: 'Fulfillment Management',
+        },
+        WarehouseOperator: {
+          user_id: '00000000-0000-4000-8000-000000000003',
+          full_name: 'Farhan Maulana (Warehouse Lead)',
+          email: 'farhan.maulana@elgs.enterprise.id',
+          role: 'WarehouseOperator',
+          department: 'Warehouse & Cryo Vault',
+        },
+        FleetDispatcher: {
+          user_id: '00000000-0000-4000-8000-000000000004',
+          full_name: 'Satria Wicaksono (Fleet Dispatcher)',
+          email: 'satria.wicaksono@elgs.enterprise.id',
+          role: 'FleetDispatcher',
+          department: 'Fleet Telematics',
+        },
+        FinanceAuditor: {
+          user_id: '00000000-0000-4000-8000-000000000005',
+          full_name: 'Evelyn Wijaya (Finance Auditor)',
+          email: 'evelyn.wijaya@elgs.enterprise.id',
+          role: 'FinanceAuditor',
+          department: 'Treasury & Internal Audit',
+        },
+        Driver: {
+          user_id: '00000000-0000-4000-8000-000000000006',
+          full_name: 'Bambang Pamungkas (Senior Driver)',
+          email: 'bambang.driver@elgs.enterprise.id',
+          role: 'Driver',
+          department: 'Fleet Operations',
+        },
+      };
+      return {
+        user: mockRoles[role],
+        permissions: ['OrderRead'],
+        message: `Switched active role to ${mockRoles[role].full_name}`,
+      };
+    }
+  },
+
+  async listAuditTrail(): Promise<AuditRecord[]> {
+    try {
+      const res = await fetch(`${API_BASE}/audit-trail`);
+      if (!res.ok) throw new Error('Failed to fetch audit trail');
+      const data = await res.json();
+      return data.audit_logs;
+    } catch {
+      return [
+        {
+          audit_id: 'aud-01',
+          actor_id: '00000000-0000-4000-8000-000000000001',
+          actor_name: 'Alexander Hartono',
+          actor_role: 'SuperAdmin',
+          action: 'SYSTEM_BOOTSTRAP',
+          resource_type: 'ELGS_CORE',
+          resource_id: 'INIT',
+          after_state: 'Genesis state initialized with SOC-2 non-repudiation',
+          ip_address: '127.0.0.1',
+          hash_signature: '7e9c5f812a149b01',
+          timestamp: new Date(Date.now() - 3600000).toISOString(),
+        },
+        {
+          audit_id: 'aud-02',
+          actor_id: '00000000-0000-4000-8000-000000000002',
+          actor_name: 'Diana Puspita',
+          actor_role: 'LogisticsManager',
+          action: 'ORDER_CREATED',
+          resource_type: 'SalesOrder',
+          resource_id: 'ORD-20261122-ALPHA01',
+          after_state: 'Created sales order with total Rp 52,500,000',
+          ip_address: '192.168.1.10',
+          hash_signature: '9a3b8c71e2f41052',
+          timestamp: new Date(Date.now() - 1800000).toISOString(),
+        },
+        {
+          audit_id: 'aud-03',
+          actor_id: '00000000-0000-4000-8000-000000000001',
+          actor_name: 'Alexander Hartono',
+          actor_role: 'SuperAdmin',
+          action: 'ORDER_APPROVED',
+          resource_type: 'SalesOrder',
+          resource_id: 'ORD-20261122-ALPHA01',
+          before_state: 'Draft',
+          after_state: 'InventoryReserved - Maker-checker verified',
+          ip_address: '192.168.1.1',
+          hash_signature: 'b4c7d8e9f0123456',
+          timestamp: new Date(Date.now() - 900000).toISOString(),
+        },
+      ];
     }
   },
 
@@ -59,6 +199,7 @@ export const LogisticsApi = {
     }
   },
 
+  // Orders CRUD
   async listOrders(status?: OrderStatus): Promise<SalesOrder[]> {
     try {
       const url = status ? `${API_BASE}/orders?status=${status}` : `${API_BASE}/orders`;
@@ -100,6 +241,8 @@ export const LogisticsApi = {
           tracking_number: 'TRK-ALPHA01',
           total_amount: 52500000,
           total_weight_kg: 120,
+          created_by: '00000000-0000-4000-8000-000000000002',
+          approved_by: '00000000-0000-4000-8000-000000000001',
           notes: 'Temperature sensitive: Keep between -25C and -15C',
           created_at: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
           updated_at: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
@@ -136,48 +279,50 @@ export const LogisticsApi = {
           tracking_number: 'TRK-BETA02',
           total_amount: 370000000,
           total_weight_kg: 130,
+          created_by: '00000000-0000-4000-8000-000000000002',
           notes: 'Handle with care: fragile server equipment',
           created_at: new Date(Date.now() - 1 * 3600 * 1000).toISOString(),
           updated_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
         },
-        {
-          id: '3c4d5e6f-0003-4000-8000-333344445555',
-          order_number: 'ORD-20261122-GAMMA03',
-          customer_id: 'CUST-PLN-NUSANTARA',
-          customer_name: 'PLN Nusantara Power',
-          items: [
-            {
-              item_id: 'item-3',
-              sku: 'IND-SOL-109',
-              name: 'Solar Inverter Controller 5kW',
-              quantity: 15,
-              unit_price: 24000000,
-              weight_kg: 12.0,
-              volume_cbm: 0.05,
-            },
-          ],
-          status: 'Delivered',
-          service_tier: 'Standard',
-          origin_warehouse_id: 'WH-SBY-EAST',
-          delivery_address: {
-            recipient_name: 'Ir. Joko Widodo M.T.',
-            phone: '+62 811-3322-1144',
-            street: 'Kawasan Industri SIER Rungkut',
-            city: 'Surabaya',
-            province: 'Jawa Timur',
-            postal_code: '60293',
-            latitude: -7.3235,
-            longitude: 112.7601,
-          },
-          tracking_number: 'TRK-GAMMA03',
-          total_amount: 360000000,
-          total_weight_kg: 180,
-          notes: '',
-          created_at: new Date(Date.now() - 12 * 3600 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 40 * 60 * 1000).toISOString(),
-        },
       ];
     }
+  },
+
+  async createOrder(payload: any): Promise<SalesOrder> {
+    const res = await fetch(`${API_BASE}/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to create order');
+    }
+    return await res.json();
+  },
+
+  async updateOrder(orderId: string, payload: any): Promise<SalesOrder> {
+    const res = await fetch(`${API_BASE}/orders/${orderId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to update order');
+    }
+    return await res.json();
+  },
+
+  async deleteOrder(orderId: string): Promise<SalesOrder> {
+    const res = await fetch(`${API_BASE}/orders/${orderId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to cancel order');
+    }
+    return await res.json();
   },
 
   async reserveStock(orderId: string): Promise<SalesOrder> {
@@ -204,6 +349,7 @@ export const LogisticsApi = {
     return await res.json();
   },
 
+  // Warehouses & Inventory
   async listWarehouses(): Promise<Warehouse[]> {
     try {
       const res = await fetch(`${API_BASE}/warehouses`);
@@ -283,30 +429,54 @@ export const LogisticsApi = {
           zone: 'HighValueSecure',
           unit_weight_kg: 6.5,
         },
-        {
-          sku: 'IND-SOL-109',
-          name: 'Solar Inverter Controller 5kW',
-          warehouse_id: 'WH-SBY-EAST',
-          bin_code: 'AMB-ROW-12',
-          on_hand: 800,
-          reserved: 80,
-          zone: 'Ambient',
-          unit_weight_kg: 12.0,
-        },
-        {
-          sku: 'AUTO-ECU-88',
-          name: 'Automotive Telematic ECU Unit',
-          warehouse_id: 'WH-BDG-WEST',
-          bin_code: 'AMB-ROW-04',
-          on_hand: 1500,
-          reserved: 200,
-          zone: 'Ambient',
-          unit_weight_kg: 0.45,
-        },
       ];
     }
   },
 
+  async createStock(payload: {
+    sku: string;
+    name: string;
+    warehouse_id: string;
+    bin_code: string;
+    initial_quantity: number;
+    zone: StorageZone;
+    unit_weight_kg: number;
+  }): Promise<WarehouseStock> {
+    const res = await fetch(`${API_BASE}/inventory`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to create stock item');
+    }
+    return await res.json();
+  },
+
+  async listOpnames(): Promise<StockOpnameAudit[]> {
+    try {
+      const res = await fetch(`${API_BASE}/inventory/opname`);
+      if (!res.ok) throw new Error('Failed to fetch opname audits');
+      const data = await res.json();
+      return data.opnames;
+    } catch {
+      return [];
+    }
+  },
+
+  async approveOpname(auditId: string): Promise<StockOpnameAudit> {
+    const res = await fetch(`${API_BASE}/inventory/opname/${auditId}/approve`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to approve opname variance');
+    }
+    return await res.json();
+  },
+
+  // Fleet
   async listFleet(): Promise<{ vehicles: Vehicle[]; drivers: Driver[] }> {
     try {
       const res = await fetch(`${API_BASE}/fleet`);
@@ -327,30 +497,6 @@ export const LogisticsApi = {
             current_lat: -6.2297,
             current_lng: 106.8295,
           },
-          {
-            id: 'VH-EVAN-02',
-            license_plate: 'B 2049 EV',
-            vehicle_type: 'ElectricVan',
-            max_payload_kg: 1200,
-            current_payload_kg: 640,
-            status: 'Dispatched',
-            fuel_battery_level_percent: 92,
-            odometer_km: 12450,
-            current_lat: -6.1852,
-            current_lng: 106.8312,
-          },
-          {
-            id: 'VH-TRAILER-03',
-            license_plate: 'L 8412 UZ',
-            vehicle_type: 'HeavyDutyTrailer',
-            max_payload_kg: 24000,
-            current_payload_kg: 0,
-            status: 'Available',
-            fuel_battery_level_percent: 98,
-            odometer_km: 112000,
-            current_lat: -7.2575,
-            current_lng: 112.7521,
-          },
         ],
         drivers: [
           {
@@ -364,20 +510,48 @@ export const LogisticsApi = {
             consecutive_driving_hours: 2.5,
             fatigue_warning: false,
           },
-          {
-            id: 'DRV-102',
-            name: 'Agus Pratama',
-            phone: '+62 813-7722-4412',
-            license_type: 'A (Commercial Light)',
-            status: 'OnRoute',
-            rating: 4.88,
-            assigned_vehicle_id: 'VH-EVAN-02',
-            consecutive_driving_hours: 1.8,
-            fatigue_warning: false,
-          },
         ],
       };
     }
+  },
+
+  async createVehicle(payload: {
+    id: string;
+    license_plate: string;
+    vehicle_type: VehicleType;
+    max_payload_kg: number;
+    fuel_battery_level_percent: number;
+    current_lat: number;
+    current_lng: number;
+  }): Promise<Vehicle> {
+    const res = await fetch(`${API_BASE}/fleet/vehicles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to create vehicle');
+    }
+    return await res.json();
+  },
+
+  async createDriver(payload: {
+    id: string;
+    name: string;
+    phone: string;
+    license_type: string;
+  }): Promise<Driver> {
+    const res = await fetch(`${API_BASE}/fleet/drivers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to create driver');
+    }
+    return await res.json();
   },
 
   async getTracking(trackingNumber: string): Promise<TrackingView> {
@@ -400,22 +574,6 @@ export const LogisticsApi = {
             location_name: 'WH-JKT-CENTRAL Cold Vault',
             description: 'Vaccine cargo packed with dry ice logger (-20.4C verified)',
             timestamp: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-          },
-          {
-            event_id: 'ev-2',
-            tracking_number: trackingNumber,
-            status: 'DISPATCHED',
-            location_name: 'Jakarta Hub Gate 4',
-            description: 'Cargo loaded onto Reefer Truck VH-REEFER-01 (Driver: Bambang P.)',
-            timestamp: new Date(Date.now() - 1 * 3600 * 1000).toISOString(),
-          },
-          {
-            event_id: 'ev-3',
-            tracking_number: trackingNumber,
-            status: 'IN_TRANSIT',
-            location_name: 'Rasuna Said Corridor',
-            description: 'In transit with live cold telemetry monitoring',
-            timestamp: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
           },
         ],
         live_telemetry: {
@@ -446,7 +604,6 @@ export const LogisticsApi = {
       if (!res.ok) throw new Error('Failed to calculate rate');
       return await res.json();
     } catch {
-      // Local calculation fallback adhering to same formula
       const volumetric = (payload.length_cm * payload.width_cm * payload.height_cm) / 5000;
       const chargeable = Math.max(payload.actual_weight_kg, volumetric, 1);
       const base = chargeable * (payload.origin_city === payload.destination_city ? 15000 : 35000);
@@ -486,23 +643,22 @@ export const LogisticsApi = {
           tax_amount: 5775000,
           total_amount: 58275000,
           status: 'Issued',
+          created_by: '00000000-0000-4000-8000-000000000005',
           due_date: new Date(Date.now() + 14 * 86400 * 1000).toISOString(),
           created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
         },
-        {
-          invoice_id: 'inv-2',
-          invoice_number: 'INV-2026-00810',
-          order_id: 'order-3',
-          customer_id: 'CUST-PLN-NUSANTARA',
-          customer_name: 'PLN Nusantara Power',
-          subtotal: 360000000,
-          tax_amount: 39600000,
-          total_amount: 399600000,
-          status: 'Paid',
-          due_date: new Date(Date.now() + 30 * 86400 * 1000).toISOString(),
-          created_at: new Date(Date.now() - 10 * 3600 * 1000).toISOString(),
-        },
       ];
     }
+  },
+
+  async settleInvoice(invoiceId: string): Promise<Invoice> {
+    const res = await fetch(`${API_BASE}/finance/invoices/${invoiceId}/settle`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to settle invoice');
+    }
+    return await res.json();
   },
 };

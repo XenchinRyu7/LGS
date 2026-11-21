@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Activity,
   Package,
@@ -6,6 +6,7 @@ import {
   Truck,
   Navigation,
   DollarSign,
+  ShieldCheck,
 } from 'lucide-react';
 import { ControlTower } from './modules/ControlTower';
 import { OrderManagement } from './modules/OrderManagement';
@@ -13,6 +14,7 @@ import { WarehouseHub } from './modules/WarehouseHub';
 import { FleetDispatch } from './modules/FleetDispatch';
 import { TrackingConsole } from './modules/TrackingConsole';
 import { FinanceLedger } from './modules/FinanceLedger';
+import { AuditTrailConsole } from './modules/AuditTrailConsole';
 
 export type DashboardTab =
   | 'control-tower'
@@ -20,10 +22,19 @@ export type DashboardTab =
   | 'warehouses'
   | 'fleet'
   | 'tracking'
-  | 'finance';
+  | 'finance'
+  | 'audit-trail';
 
 export function EnterpriseDashboard() {
   const [activeTab, setActiveTab] = useState<DashboardTab>('control-tower');
+
+  useEffect(() => {
+    const handleRoleChanged = () => {
+      // Trigger refresh if needed
+    };
+    window.addEventListener('elgs:role-changed', handleRoleChanged);
+    return () => window.removeEventListener('elgs:role-changed', handleRoleChanged);
+  }, []);
 
   const tabs = [
     { id: 'control-tower', label: 'Control Tower', icon: Activity },
@@ -32,6 +43,7 @@ export function EnterpriseDashboard() {
     { id: 'fleet', label: 'Fleet & Dispatch', icon: Truck },
     { id: 'tracking', label: 'Live Telemetry & Tracking', icon: Navigation },
     { id: 'finance', label: 'Finance & Tariffs', icon: DollarSign },
+    { id: 'audit-trail', label: 'SOC-2 & SoD Audit Trail', icon: ShieldCheck },
   ];
 
   return (
@@ -54,6 +66,11 @@ export function EnterpriseDashboard() {
             >
               <Icon className="h-4 w-4 shrink-0" />
               <span>{tab.label}</span>
+              {tab.id === 'audit-trail' && (
+                <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.2 text-[9px] font-mono font-bold text-emerald-400">
+                  LIVE
+                </span>
+              )}
             </button>
           );
         })}
@@ -67,6 +84,7 @@ export function EnterpriseDashboard() {
         {activeTab === 'fleet' && <FleetDispatch />}
         {activeTab === 'tracking' && <TrackingConsole />}
         {activeTab === 'finance' && <FinanceLedger />}
+        {activeTab === 'audit-trail' && <AuditTrailConsole />}
       </div>
     </div>
   );
