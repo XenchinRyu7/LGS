@@ -4,7 +4,9 @@ use crate::state::AppState;
 pub struct AnalyticsService;
 
 impl AnalyticsService {
-    pub fn get_executive_summary(state: &AppState) -> (ExecutiveAnalyticsSummary, Vec<ThroughputPoint>) {
+    pub fn get_executive_summary(
+        state: &AppState,
+    ) -> (ExecutiveAnalyticsSummary, Vec<ThroughputPoint>) {
         let read = state.inner.read();
 
         let total_orders = read.orders.len() as u32;
@@ -51,13 +53,41 @@ impl AnalyticsService {
         };
 
         let throughput = vec![
-            ThroughputPoint { label: "06:00".to_string(), value: 14, secondary: 8 },
-            ThroughputPoint { label: "08:00".to_string(), value: 45, secondary: 22 },
-            ThroughputPoint { label: "10:00".to_string(), value: 88, secondary: 64 },
-            ThroughputPoint { label: "12:00".to_string(), value: 120, secondary: 95 },
-            ThroughputPoint { label: "14:00".to_string(), value: 165, secondary: 130 },
-            ThroughputPoint { label: "16:00".to_string(), value: 210, secondary: 185 },
-            ThroughputPoint { label: "18:00".to_string(), value: 248, secondary: 232 },
+            ThroughputPoint {
+                label: "06:00".to_string(),
+                value: 14,
+                secondary: 8,
+            },
+            ThroughputPoint {
+                label: "08:00".to_string(),
+                value: 45,
+                secondary: 22,
+            },
+            ThroughputPoint {
+                label: "10:00".to_string(),
+                value: 88,
+                secondary: 64,
+            },
+            ThroughputPoint {
+                label: "12:00".to_string(),
+                value: 120,
+                secondary: 95,
+            },
+            ThroughputPoint {
+                label: "14:00".to_string(),
+                value: 165,
+                secondary: 130,
+            },
+            ThroughputPoint {
+                label: "16:00".to_string(),
+                value: 210,
+                secondary: 185,
+            },
+            ThroughputPoint {
+                label: "18:00".to_string(),
+                value: 248,
+                secondary: 232,
+            },
         ];
 
         (summary, throughput)

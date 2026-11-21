@@ -1,9 +1,7 @@
 use crate::domain::{
     rbac::{AuthUser, Permission},
     sod::SodEngine,
-    warehouse::{
-        StockOpnameAudit, StockTransferRequest, StorageZone, Warehouse, WarehouseStock,
-    },
+    warehouse::{StockOpnameAudit, StockTransferRequest, StorageZone, Warehouse, WarehouseStock},
 };
 use crate::state::AppState;
 use chrono::Utc;
@@ -64,12 +62,22 @@ impl WarehouseService {
         payload: CreateStockPayload,
     ) -> Result<WarehouseStock, String> {
         if !actor.has_permission(&Permission::WarehouseManage) {
-            return Err(format!("RBAC Error: Role {:?} lacks WarehouseManage permission", actor.role));
+            return Err(format!(
+                "RBAC Error: Role {:?} lacks WarehouseManage permission",
+                actor.role
+            ));
         }
 
         let mut write = state.inner.write();
-        if write.stocks.iter().any(|s| s.sku == payload.sku && s.warehouse_id == payload.warehouse_id) {
-            return Err(format!("Stock for SKU {} already exists in warehouse {}", payload.sku, payload.warehouse_id));
+        if write
+            .stocks
+            .iter()
+            .any(|s| s.sku == payload.sku && s.warehouse_id == payload.warehouse_id)
+        {
+            return Err(format!(
+                "Stock for SKU {} already exists in warehouse {}",
+                payload.sku, payload.warehouse_id
+            ));
         }
 
         let stock = WarehouseStock {
@@ -92,7 +100,10 @@ impl WarehouseService {
             "WarehouseStock",
             &payload.sku,
             None,
-            Some(format!("Created SKU {} in {}", payload.sku, payload.warehouse_id)),
+            Some(format!(
+                "Created SKU {} in {}",
+                payload.sku, payload.warehouse_id
+            )),
             "127.0.0.1",
         );
 
@@ -105,7 +116,10 @@ impl WarehouseService {
         payload: StockTransferPayload,
     ) -> Result<StockTransferRequest, String> {
         if !actor.has_permission(&Permission::WarehouseManage) {
-            return Err(format!("RBAC Error: Role {:?} lacks WarehouseManage permission", actor.role));
+            return Err(format!(
+                "RBAC Error: Role {:?} lacks WarehouseManage permission",
+                actor.role
+            ));
         }
 
         let mut write = state.inner.write();
@@ -168,7 +182,10 @@ impl WarehouseService {
             "WarehouseStock",
             &payload.sku,
             Some(format!("Transferred from {}", payload.from_warehouse)),
-            Some(format!("Moved {} units to {}", payload.quantity, payload.to_warehouse)),
+            Some(format!(
+                "Moved {} units to {}",
+                payload.quantity, payload.to_warehouse
+            )),
             "127.0.0.1",
         );
 
@@ -182,7 +199,10 @@ impl WarehouseService {
         payload: StockOpnamePayload,
     ) -> Result<StockOpnameAudit, String> {
         if !actor.has_permission(&Permission::StockOpnameSubmit) {
-            return Err(format!("RBAC Error: Role {:?} lacks StockOpnameSubmit permission", actor.role));
+            return Err(format!(
+                "RBAC Error: Role {:?} lacks StockOpnameSubmit permission",
+                actor.role
+            ));
         }
 
         let mut write = state.inner.write();
@@ -219,7 +239,10 @@ impl WarehouseService {
             "StockOpnameAudit",
             &audit.audit_id.to_string(),
             Some(format!("System on-hand count: {}", system_count)),
-            Some(format!("Physical count: {}, Discrepancy: {}", payload.physical_count, discrepancy)),
+            Some(format!(
+                "Physical count: {}, Discrepancy: {}",
+                payload.physical_count, discrepancy
+            )),
             "127.0.0.1",
         );
 
@@ -233,7 +256,10 @@ impl WarehouseService {
         audit_id: Uuid,
     ) -> Result<StockOpnameAudit, String> {
         if !actor.has_permission(&Permission::StockOpnameApprove) {
-            return Err(format!("RBAC Error: Role {:?} lacks StockOpnameApprove permission", actor.role));
+            return Err(format!(
+                "RBAC Error: Role {:?} lacks StockOpnameApprove permission",
+                actor.role
+            ));
         }
 
         let mut write = state.inner.write();
@@ -248,7 +274,10 @@ impl WarehouseService {
         let audit_status = write.stock_opnames[audit_idx].status.clone();
 
         if audit_status != "PENDING_APPROVAL" {
-            return Err(format!("Audit {} has already been finalized ({})", audit_id, audit_status));
+            return Err(format!(
+                "Audit {} has already been finalized ({})",
+                audit_id, audit_status
+            ));
         }
 
         // SoD Check: Count submitter cannot approve reconciliation
@@ -290,7 +319,10 @@ impl WarehouseService {
             "StockOpnameAudit",
             &resolved.audit_id.to_string(),
             Some("PENDING_APPROVAL".to_string()),
-            Some(format!("Approved by {}. Inventory updated to {} units", actor.full_name, physical_count)),
+            Some(format!(
+                "Approved by {}. Inventory updated to {} units",
+                actor.full_name, physical_count
+            )),
             "127.0.0.1",
         );
 

@@ -12,11 +12,13 @@ pub async fn get_tracking(
     Path(tracking_number): Path<String>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     TrackingService::get_tracking_view(&state, &tracking_number)
-        .map(|tracking| Json(tracking))
+        .map(Json)
         .ok_or_else(|| {
             (
                 StatusCode::NOT_FOUND,
-                Json(json!({ "error": format!("Tracking number '{}' not found", tracking_number) })),
+                Json(
+                    json!({ "error": format!("Tracking number '{}' not found", tracking_number) }),
+                ),
             )
         })
 }

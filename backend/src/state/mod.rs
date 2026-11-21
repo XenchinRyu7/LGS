@@ -40,6 +40,12 @@ pub struct AppState {
     pub inner: Arc<RwLock<AppStateInner>>,
 }
 
+impl Default for AppState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AppState {
     pub fn new() -> Self {
         let now = Utc::now();
@@ -431,6 +437,7 @@ impl AppState {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn record_audit(
         &self,
         actor: &AuthUser,

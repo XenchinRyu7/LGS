@@ -19,6 +19,7 @@ pub struct AuditRecord {
 }
 
 impl AuditRecord {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         actor_id: Uuid,
         actor_name: String,
@@ -36,7 +37,12 @@ impl AuditRecord {
         // Non-repudiation cryptographic fingerprint simulation
         let payload = format!(
             "{}:{}:{}:{}:{}:{}",
-            audit_id, actor_id, action, resource_type, resource_id, timestamp.to_rfc3339()
+            audit_id,
+            actor_id,
+            action,
+            resource_type,
+            resource_id,
+            timestamp.to_rfc3339()
         );
         let hash_signature = format!("{:x}", md5_or_simple_hash(&payload));
 

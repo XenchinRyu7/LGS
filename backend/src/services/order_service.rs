@@ -65,7 +65,10 @@ impl OrderService {
         payload: CreateOrderPayload,
     ) -> Result<SalesOrder, String> {
         if !actor.has_permission(&Permission::OrderCreate) {
-            return Err(format!("RBAC Error: Role {:?} lacks OrderCreate permission", actor.role));
+            return Err(format!(
+                "RBAC Error: Role {:?} lacks OrderCreate permission",
+                actor.role
+            ));
         }
 
         let order = SalesOrder::new(
@@ -91,7 +94,10 @@ impl OrderService {
             "SalesOrder",
             &order.order_number,
             None,
-            Some(format!("Created order {} with total Rp {}", order.order_number, order.total_amount)),
+            Some(format!(
+                "Created order {} with total Rp {}",
+                order.order_number, order.total_amount
+            )),
             "127.0.0.1",
         );
 
@@ -105,7 +111,10 @@ impl OrderService {
         payload: UpdateOrderPayload,
     ) -> Result<SalesOrder, String> {
         if !actor.has_permission(&Permission::OrderUpdate) {
-            return Err(format!("RBAC Error: Role {:?} lacks OrderUpdate permission", actor.role));
+            return Err(format!(
+                "RBAC Error: Role {:?} lacks OrderUpdate permission",
+                actor.role
+            ));
         }
 
         let mut write = state.inner.write();
@@ -115,7 +124,10 @@ impl OrderService {
             .find(|o| o.id == order_id)
             .ok_or_else(|| format!("Order {} not found", order_id))?;
 
-        let before = format!("customer: {}, notes: {:?}", order.customer_name, order.notes);
+        let before = format!(
+            "customer: {}, notes: {:?}",
+            order.customer_name, order.notes
+        );
         order
             .update_details(
                 payload.customer_name,
@@ -125,7 +137,10 @@ impl OrderService {
             )
             .map_err(|e| e.to_string())?;
 
-        let after = format!("customer: {}, notes: {:?}", order.customer_name, order.notes);
+        let after = format!(
+            "customer: {}, notes: {:?}",
+            order.customer_name, order.notes
+        );
         let updated = order.clone();
         drop(write);
 
@@ -148,7 +163,10 @@ impl OrderService {
         order_id: Uuid,
     ) -> Result<SalesOrder, String> {
         if !actor.has_permission(&Permission::OrderDelete) {
-            return Err(format!("RBAC Error: Role {:?} lacks OrderDelete permission", actor.role));
+            return Err(format!(
+                "RBAC Error: Role {:?} lacks OrderDelete permission",
+                actor.role
+            ));
         }
 
         let mut write = state.inner.write();
@@ -162,7 +180,9 @@ impl OrderService {
         let items = write.orders[order_idx].items.clone();
         let order_num = write.orders[order_idx].order_number.clone();
 
-        write.orders[order_idx].transition_to(OrderStatus::Cancelled).map_err(|e| e.to_string())?;
+        write.orders[order_idx]
+            .transition_to(OrderStatus::Cancelled)
+            .map_err(|e| e.to_string())?;
 
         // Release any reserved stock
         for item in &items {
@@ -198,7 +218,10 @@ impl OrderService {
         order_id: Uuid,
     ) -> Result<SalesOrder, String> {
         if !actor.has_permission(&Permission::OrderReserve) {
-            return Err(format!("RBAC Error: Role {:?} lacks OrderReserve permission", actor.role));
+            return Err(format!(
+                "RBAC Error: Role {:?} lacks OrderReserve permission",
+                actor.role
+            ));
         }
 
         let mut write = state.inner.write();
@@ -229,7 +252,10 @@ impl OrderService {
 
         let current_status = write.orders[order_idx].status.clone();
         if current_status != OrderStatus::Confirmed && current_status != OrderStatus::Draft {
-            return Err(format!("Invalid state transition from {:?} to InventoryReserved", current_status));
+            return Err(format!(
+                "Invalid state transition from {:?} to InventoryReserved",
+                current_status
+            ));
         }
 
         let origin_wh = write.orders[order_idx].origin_warehouse_id.clone();
@@ -272,7 +298,9 @@ impl OrderService {
             });
         }
 
-        write.orders[order_idx].transition_to(OrderStatus::InventoryReserved).map_err(|e| e.to_string())?;
+        write.orders[order_idx]
+            .transition_to(OrderStatus::InventoryReserved)
+            .map_err(|e| e.to_string())?;
         write.orders[order_idx].approved_by = Some(actor.user_id);
         let updated = write.orders[order_idx].clone();
         drop(write);
@@ -297,7 +325,10 @@ impl OrderService {
         next_status: OrderStatus,
     ) -> Result<SalesOrder, String> {
         if !actor.has_permission(&Permission::OrderTransition) {
-            return Err(format!("RBAC Error: Role {:?} lacks OrderTransition permission", actor.role));
+            return Err(format!(
+                "RBAC Error: Role {:?} lacks OrderTransition permission",
+                actor.role
+            ));
         }
 
         let mut write = state.inner.write();
@@ -309,7 +340,9 @@ impl OrderService {
             .ok_or_else(|| format!("Order {} not found", order_id))?;
 
         let old_status = format!("{:?}", write.orders[order_idx].status);
-        write.orders[order_idx].transition_to(next_status.clone()).map_err(|e| e.to_string())?;
+        write.orders[order_idx]
+            .transition_to(next_status.clone())
+            .map_err(|e| e.to_string())?;
 
         let updated = write.orders[order_idx].clone();
         drop(write);

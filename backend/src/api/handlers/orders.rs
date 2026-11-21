@@ -49,8 +49,13 @@ pub async fn get_order(
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     OrderService::get_order_by_id(&state, id)
-        .map(|order| Json(order))
-        .map_err(|e| (StatusCode::NOT_FOUND, Json(json!({ "error": e.to_string() }))))
+        .map(Json)
+        .map_err(|e| {
+            (
+                StatusCode::NOT_FOUND,
+                Json(json!({ "error": e.to_string() })),
+            )
+        })
 }
 
 pub async fn create_order(
@@ -70,7 +75,7 @@ pub async fn update_order(
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let actor = state.inner.read().current_user.clone();
     OrderService::update_order(&state, &actor, id, payload)
-        .map(|order| Json(order))
+        .map(Json)
         .map_err(|e| (StatusCode::BAD_REQUEST, Json(json!({ "error": e }))))
 }
 
@@ -80,7 +85,7 @@ pub async fn delete_order(
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let actor = state.inner.read().current_user.clone();
     OrderService::cancel_or_delete_order(&state, &actor, id)
-        .map(|order| Json(order))
+        .map(Json)
         .map_err(|e| (StatusCode::BAD_REQUEST, Json(json!({ "error": e }))))
 }
 
@@ -90,7 +95,7 @@ pub async fn reserve_stock(
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let actor = state.inner.read().current_user.clone();
     OrderService::reserve_order_inventory(&state, &actor, id)
-        .map(|order| Json(order))
+        .map(Json)
         .map_err(|e| (StatusCode::BAD_REQUEST, Json(json!({ "error": e }))))
 }
 
@@ -101,6 +106,6 @@ pub async fn transition_status(
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let actor = state.inner.read().current_user.clone();
     OrderService::transition_order_status(&state, &actor, id, payload.target_status)
-        .map(|order| Json(order))
+        .map(Json)
         .map_err(|e| (StatusCode::BAD_REQUEST, Json(json!({ "error": e }))))
 }

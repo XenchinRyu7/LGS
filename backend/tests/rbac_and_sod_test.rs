@@ -75,7 +75,10 @@ fn test_sod_order_maker_checker_rule_enforced() {
         .clone();
 
     let admin_reserve = OrderService::reserve_order_inventory(&state, &admin, order.id);
-    assert!(admin_reserve.is_ok(), "SuperAdmin must be able to approve dual-control orders");
+    assert!(
+        admin_reserve.is_ok(),
+        "SuperAdmin must be able to approve dual-control orders"
+    );
 }
 
 #[test]
@@ -151,5 +154,8 @@ fn test_soc2_audit_trail_immutable_logging() {
     assert_eq!(read.audit_logs.len(), initial_count + 1);
     let latest = read.audit_logs.last().unwrap();
     assert_eq!(latest.action, "TEST_ACTION");
-    assert!(!latest.hash_signature.is_empty(), "Cryptographic hash signature must be present");
+    assert!(
+        !latest.hash_signature.is_empty(),
+        "Cryptographic hash signature must be present"
+    );
 }

@@ -12,9 +12,7 @@ use axum::{
 use serde_json::json;
 use uuid::Uuid;
 
-pub async fn calculate_tariff(
-    Json(payload): Json<ShippingRateQuoteRequest>,
-) -> impl IntoResponse {
+pub async fn calculate_tariff(Json(payload): Json<ShippingRateQuoteRequest>) -> impl IntoResponse {
     let quote = payload.calculate();
     Json(quote)
 }
@@ -40,6 +38,6 @@ pub async fn settle_invoice(
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let actor = state.inner.read().current_user.clone();
     FinanceService::settle_invoice(&state, &actor, invoice_id)
-        .map(|inv| Json(inv))
+        .map(Json)
         .map_err(|err| (StatusCode::BAD_REQUEST, Json(json!({ "error": err }))))
 }

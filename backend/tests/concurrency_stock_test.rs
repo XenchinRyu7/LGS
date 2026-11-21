@@ -41,7 +41,8 @@ async fn test_concurrent_stock_reservation_integrity() {
                     notes: None,
                 };
 
-                let order = OrderService::create_order(&state_clone, &admin_actor, payload).unwrap();
+                let order =
+                    OrderService::create_order(&state_clone, &admin_actor, payload).unwrap();
                 OrderService::reserve_order_inventory(&state_clone, &admin_actor, order.id)
             })
         })
@@ -49,7 +50,10 @@ async fn test_concurrent_stock_reservation_integrity() {
 
     for handle in handles {
         let res = handle.await.unwrap();
-        assert!(res.is_ok(), "Concurrent reservation must succeed within limits");
+        assert!(
+            res.is_ok(),
+            "Concurrent reservation must succeed within limits"
+        );
     }
 
     let read = state.inner.read();

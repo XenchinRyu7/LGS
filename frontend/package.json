@@ -8,7 +8,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "test": "vitest run",
-    "lint": "echo 'Frontend syntax verified'"
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@astrojs/react": "^4.2.1",

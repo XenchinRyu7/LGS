@@ -63,12 +63,22 @@ impl TransportService {
         payload: CreateVehiclePayload,
     ) -> Result<Vehicle, String> {
         if !actor.has_permission(&Permission::FleetManage) {
-            return Err(format!("RBAC Error: Role {:?} lacks FleetManage permission", actor.role));
+            return Err(format!(
+                "RBAC Error: Role {:?} lacks FleetManage permission",
+                actor.role
+            ));
         }
 
         let mut write = state.inner.write();
-        if write.vehicles.iter().any(|v| v.id == payload.id || v.license_plate == payload.license_plate) {
-            return Err(format!("Vehicle {} with plate {} already exists", payload.id, payload.license_plate));
+        if write
+            .vehicles
+            .iter()
+            .any(|v| v.id == payload.id || v.license_plate == payload.license_plate)
+        {
+            return Err(format!(
+                "Vehicle {} with plate {} already exists",
+                payload.id, payload.license_plate
+            ));
         }
 
         let vehicle = Vehicle {
@@ -106,7 +116,10 @@ impl TransportService {
         payload: CreateDriverPayload,
     ) -> Result<Driver, String> {
         if !actor.has_permission(&Permission::FleetManage) {
-            return Err(format!("RBAC Error: Role {:?} lacks FleetManage permission", actor.role));
+            return Err(format!(
+                "RBAC Error: Role {:?} lacks FleetManage permission",
+                actor.role
+            ));
         }
 
         let mut write = state.inner.write();
@@ -148,7 +161,10 @@ impl TransportService {
         payload: DispatchRoutePayload,
     ) -> Result<DeliveryRoute, String> {
         if !actor.has_permission(&Permission::RouteDispatch) {
-            return Err(format!("RBAC Error: Role {:?} lacks RouteDispatch permission", actor.role));
+            return Err(format!(
+                "RBAC Error: Role {:?} lacks RouteDispatch permission",
+                actor.role
+            ));
         }
 
         let mut write = state.inner.write();
@@ -177,7 +193,10 @@ impl TransportService {
                 waypoints.push(Waypoint {
                     sequence: (idx + 1) as u32,
                     order_id: Some(*order_id),
-                    address_label: format!("{}, {}", order.delivery_address.street, order.delivery_address.city),
+                    address_label: format!(
+                        "{}, {}",
+                        order.delivery_address.street, order.delivery_address.city
+                    ),
                     latitude: order.delivery_address.latitude,
                     longitude: order.delivery_address.longitude,
                     estimated_arrival: now + chrono::Duration::minutes((30 * (idx + 1)) as i64),
@@ -189,7 +208,7 @@ impl TransportService {
         let route_id = Uuid::new_v4();
         let route = DeliveryRoute {
             route_id,
-            route_code: format!("RTE-{}", &route_id.to_string()[..6].to_uppercase()),
+            route_code: format!("RTE-{}", route_id.to_string()[..6].to_uppercase()),
             driver_id: payload.driver_id.clone(),
             vehicle_id: payload.vehicle_id.clone(),
             origin_warehouse_id: payload.origin_warehouse_id,
@@ -209,7 +228,12 @@ impl TransportService {
             "DeliveryRoute",
             &route.route_code,
             None,
-            Some(format!("Dispatched {} with {} and {} waypoints", route.route_code, payload.vehicle_id, payload.order_ids.len())),
+            Some(format!(
+                "Dispatched {} with {} and {} waypoints",
+                route.route_code,
+                payload.vehicle_id,
+                payload.order_ids.len()
+            )),
             "127.0.0.1",
         );
 
@@ -255,7 +279,10 @@ impl TransportService {
             "ProofOfDelivery",
             &trk,
             Some("InTransit".to_string()),
-            Some(format!("Delivered to {} ({})", payload.recipient_name, payload.relationship)),
+            Some(format!(
+                "Delivered to {} ({})",
+                payload.recipient_name, payload.relationship
+            )),
             "127.0.0.1",
         );
 

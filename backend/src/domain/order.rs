@@ -55,7 +55,9 @@ pub enum OrderError {
     NotFound(Uuid),
     #[error("Insufficient stock for SKU {0}")]
     InsufficientStock(String),
-    #[error("Cannot modify order in status {0:?}. Only Draft or Confirmed orders can be modified.")]
+    #[error(
+        "Cannot modify order in status {0:?}. Only Draft or Confirmed orders can be modified."
+    )]
     CannotModifyNonDraft(OrderStatus),
 }
 
@@ -112,6 +114,7 @@ pub struct SalesOrder {
 }
 
 impl SalesOrder {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         customer_id: String,
         customer_name: String,
@@ -162,8 +165,16 @@ impl SalesOrder {
     }
 
     pub fn recalculate_totals(&mut self) {
-        self.total_amount = self.items.iter().map(|i| i.quantity as f64 * i.unit_price).sum();
-        self.total_weight_kg = self.items.iter().map(|i| i.quantity as f64 * i.weight_kg).sum();
+        self.total_amount = self
+            .items
+            .iter()
+            .map(|i| i.quantity as f64 * i.unit_price)
+            .sum();
+        self.total_weight_kg = self
+            .items
+            .iter()
+            .map(|i| i.quantity as f64 * i.weight_kg)
+            .sum();
         self.updated_at = Utc::now();
     }
 

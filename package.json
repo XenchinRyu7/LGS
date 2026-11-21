@@ -13,7 +13,9 @@
     "test:backend": "cd backend && cargo test",
     "test:frontend": "cd frontend && pnpm test",
     "test": "npm run test:backend && npm run test:frontend",
-    "lint": "cd frontend && pnpm lint"
+    "lint:backend": "cd backend && cargo fmt --check && cargo clippy -- -D warnings",
+    "lint:frontend": "cd frontend && pnpm lint",
+    "lint": "npm run lint:backend && npm run lint:frontend"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

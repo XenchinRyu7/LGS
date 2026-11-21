@@ -58,9 +58,8 @@ impl ShippingRateQuoteRequest {
         let express_multiplier = if self.is_express { 1.5 } else { 1.0 };
         let total = (base_rate + fuel_surcharge + cold_chain_surcharge) * express_multiplier;
 
-        let estimated_transit_days = if self.is_express {
-            1
-        } else if self.origin_city == self.destination_city {
+        let estimated_transit_days = if self.is_express || self.origin_city == self.destination_city
+        {
             1
         } else {
             2

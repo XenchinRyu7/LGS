@@ -31,46 +31,69 @@ impl UserRole {
         match self {
             UserRole::SuperAdmin => {
                 perms.extend([
-                    OrderRead, OrderCreate, OrderUpdate, OrderDelete, OrderApprove, OrderReserve, OrderTransition,
-                    WarehouseRead, WarehouseManage, StockOpnameSubmit, StockOpnameApprove,
-                    FleetRead, FleetManage, RouteDispatch, PodSubmit,
-                    FinanceRead, InvoiceCreate, InvoiceSettle,
-                    AuditTrailRead, SecurityAdmin,
+                    OrderRead,
+                    OrderCreate,
+                    OrderUpdate,
+                    OrderDelete,
+                    OrderApprove,
+                    OrderReserve,
+                    OrderTransition,
+                    WarehouseRead,
+                    WarehouseManage,
+                    StockOpnameSubmit,
+                    StockOpnameApprove,
+                    FleetRead,
+                    FleetManage,
+                    RouteDispatch,
+                    PodSubmit,
+                    FinanceRead,
+                    InvoiceCreate,
+                    InvoiceSettle,
+                    AuditTrailRead,
+                    SecurityAdmin,
                 ]);
             }
             UserRole::LogisticsManager => {
                 perms.extend([
-                    OrderRead, OrderCreate, OrderUpdate, OrderApprove, OrderReserve, OrderTransition,
-                    WarehouseRead, WarehouseManage, StockOpnameSubmit, StockOpnameApprove,
-                    FleetRead, RouteDispatch,
+                    OrderRead,
+                    OrderCreate,
+                    OrderUpdate,
+                    OrderApprove,
+                    OrderReserve,
+                    OrderTransition,
+                    WarehouseRead,
+                    WarehouseManage,
+                    StockOpnameSubmit,
+                    StockOpnameApprove,
+                    FleetRead,
+                    RouteDispatch,
                     FinanceRead,
                     AuditTrailRead,
                 ]);
             }
             UserRole::WarehouseOperator => {
                 perms.extend([
-                    OrderRead, OrderReserve, OrderTransition,
-                    WarehouseRead, StockOpnameSubmit,
+                    OrderRead,
+                    OrderReserve,
+                    OrderTransition,
+                    WarehouseRead,
+                    StockOpnameSubmit,
                 ]);
             }
             UserRole::FleetDispatcher => {
-                perms.extend([
-                    OrderRead,
-                    FleetRead, FleetManage, RouteDispatch,
-                ]);
+                perms.extend([OrderRead, FleetRead, FleetManage, RouteDispatch]);
             }
             UserRole::FinanceAuditor => {
                 perms.extend([
                     OrderRead,
-                    FinanceRead, InvoiceCreate, InvoiceSettle,
+                    FinanceRead,
+                    InvoiceCreate,
+                    InvoiceSettle,
                     AuditTrailRead,
                 ]);
             }
             UserRole::Driver => {
-                perms.extend([
-                    OrderRead,
-                    FleetRead, PodSubmit,
-                ]);
+                perms.extend([OrderRead, FleetRead, PodSubmit]);
             }
         }
         perms

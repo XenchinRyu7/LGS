@@ -30,7 +30,10 @@ impl FinanceService {
         payload: CreateInvoicePayload,
     ) -> Result<Invoice, String> {
         if !actor.has_permission(&Permission::InvoiceCreate) {
-            return Err(format!("RBAC Error: Role {:?} lacks InvoiceCreate permission", actor.role));
+            return Err(format!(
+                "RBAC Error: Role {:?} lacks InvoiceCreate permission",
+                actor.role
+            ));
         }
 
         let tax = payload.subtotal * 0.11; // 11% PPN
@@ -64,7 +67,10 @@ impl FinanceService {
             "Invoice",
             &invoice.invoice_number,
             None,
-            Some(format!("Issued invoice {} for total Rp {}", invoice.invoice_number, total)),
+            Some(format!(
+                "Issued invoice {} for total Rp {}",
+                invoice.invoice_number, total
+            )),
             "127.0.0.1",
         );
 
@@ -77,7 +83,10 @@ impl FinanceService {
         invoice_id: Uuid,
     ) -> Result<Invoice, String> {
         if !actor.has_permission(&Permission::InvoiceSettle) {
-            return Err(format!("RBAC Error: Role {:?} lacks InvoiceSettle permission", actor.role));
+            return Err(format!(
+                "RBAC Error: Role {:?} lacks InvoiceSettle permission",
+                actor.role
+            ));
         }
 
         let mut write = state.inner.write();

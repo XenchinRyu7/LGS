@@ -68,7 +68,7 @@ pub async fn approve_opname(
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let actor = state.inner.read().current_user.clone();
     WarehouseService::approve_stock_opname(&state, &actor, audit_id)
-        .map(|audit| Json(audit))
+        .map(Json)
         .map_err(|e| (StatusCode::BAD_REQUEST, Json(json!({ "error": e }))))
 }
 

@@ -24,7 +24,11 @@ pub struct SodEngine;
 
 impl SodEngine {
     /// Validates Maker-Checker rule on Order confirmation & dispatch
-    pub fn validate_order_approval(actor: &AuthUser, creator_id: Option<Uuid>, order_id: Uuid) -> Result<(), SodError> {
+    pub fn validate_order_approval(
+        actor: &AuthUser,
+        creator_id: Option<Uuid>,
+        order_id: Uuid,
+    ) -> Result<(), SodError> {
         if let Some(c_id) = creator_id {
             // If the same person created the order, they cannot approve/dispatch it themselves
             if actor.user_id == c_id && actor.role != UserRole::SuperAdmin {
@@ -48,7 +52,10 @@ impl SodEngine {
     }
 
     /// Validates Dual-Control on Invoice Payment Settlement
-    pub fn validate_invoice_settlement(actor: &AuthUser, created_by: Option<Uuid>) -> Result<(), SodError> {
+    pub fn validate_invoice_settlement(
+        actor: &AuthUser,
+        created_by: Option<Uuid>,
+    ) -> Result<(), SodError> {
         if let Some(c_id) = created_by {
             if actor.user_id == c_id && actor.role != UserRole::SuperAdmin {
                 return Err(SodError::FinanceDualControlViolation {

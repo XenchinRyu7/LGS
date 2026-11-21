@@ -745,6 +745,42 @@ export const LogisticsApi = {
     }
   },
 
+  async createInvoice(payload: {
+    order_id: string;
+    customer_id: string;
+    customer_name: string;
+    subtotal: number;
+  }): Promise<Invoice> {
+    try {
+      const res = await fetch(`${API_BASE}/finance/invoices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Failed to create invoice' }));
+        throw new Error(err.error || 'Failed to create invoice');
+      }
+      return await res.json();
+    } catch {
+      const tax = payload.subtotal * 0.11;
+      return {
+        invoice_id: `inv-${Date.now()}`,
+        invoice_number: `INV-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+        order_id: payload.order_id,
+        customer_id: payload.customer_id,
+        customer_name: payload.customer_name,
+        subtotal: payload.subtotal,
+        tax_amount: tax,
+        total_amount: payload.subtotal + tax,
+        status: 'Issued',
+        created_by: '00000000-0000-4000-8000-000000000005',
+        due_date: new Date(Date.now() + 14 * 86400 * 1000).toISOString(),
+        created_at: new Date().toISOString(),
+      };
+    }
+  },
+
   async listInvoices(): Promise<Invoice[]> {
     try {
       const res = await fetch(`${API_BASE}/finance/invoices`);

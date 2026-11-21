@@ -7,7 +7,10 @@ pub struct TrackingService;
 impl TrackingService {
     pub fn get_tracking_view(state: &AppState, tracking_number: &str) -> Option<TrackingView> {
         let read = state.inner.read();
-        let order = read.orders.iter().find(|o| o.tracking_number == tracking_number)?;
+        let order = read
+            .orders
+            .iter()
+            .find(|o| o.tracking_number == tracking_number)?;
 
         let events: Vec<TrackingTimelineEvent> = read
             .tracking_events
