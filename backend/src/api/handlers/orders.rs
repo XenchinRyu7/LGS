@@ -1,6 +1,8 @@
 use crate::{
     domain::order::OrderStatus,
-    services::order_service::{CreateOrderPayload, OrderService, TransitionStatusPayload},
+    services::order_service::{
+        CreateOrderPayload, OrderService, TransitionStatusPayload, UpdateOrderPayload,
+    },
     state::AppState,
 };
 use axum::{
@@ -55,18 +57,41 @@ pub async fn create_order(
     State(state): State<AppState>,
     Json(payload): Json<CreateOrderPayload>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    OrderService::create_order(&state, payload)
+    let actor = state.inner.read().current_user.clone();
+    OrderService::create_order(&state, &actor, payload)
         .map(|order| (StatusCode::CREATED, Json(order)))
-        .map_err(|e| (StatusCode::BAD_REQUEST, Json(json!({ "error": e.to_string() }))))
+        .map_err(|e| (StatusCode::BAD_REQUEST, Json(json!({ "error": e }))))
+}
+
+pub async fn update_order(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<UpdateOrderPayload>,
+) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    let actor = state.inner.read().current_user.clone();
+    OrderService::update_order(&state, &actor, id, payload)
+        .map(|order| Json(order))
+        .map_err(|e| (StatusCode::BAD_REQUEST, Json(json!({ "error": e }))))
+}
+
+pub async fn delete_order(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    let actor = state.inner.read().current_user.clone();
+    OrderService::cancel_or_delete_order(&state, &actor, id)
+        .map(|order| Json(order))
+        .map_err(|e| (StatusCode::BAD_REQUEST, Json(json!({ "error": e }))))
 }
 
 pub async fn reserve_stock(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    OrderService::reserve_order_inventory(&state, id)
+    let actor = state.inner.read().current_user.clone();
+    OrderService::reserve_order_inventory(&state, &actor, id)
         .map(|order| Json(order))
-        .map_err(|e| (StatusCode::BAD_REQUEST, Json(json!({ "error": e.to_string() }))))
+        .map_err(|e| (StatusCode::BAD_REQUEST, Json(json!({ "error": e }))))
 }
 
 pub async fn transition_status(
@@ -74,7 +99,8 @@ pub async fn transition_status(
     Path(id): Path<Uuid>,
     Json(payload): Json<TransitionStatusPayload>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    OrderService::transition_order_status(&state, id, payload.target_status)
+    let actor = state.inner.read().current_user.clone();
+    OrderService::transition_order_status(&state, &actor, id, payload.target_status)
         .map(|order| Json(order))
-        .map_err(|e| (StatusCode::BAD_REQUEST, Json(json!({ "error": e.to_string() }))))
+        .map_err(|e| (StatusCode::BAD_REQUEST, Json(json!({ "error": e }))))
 }

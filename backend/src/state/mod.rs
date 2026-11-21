@@ -1,6 +1,8 @@
 use crate::domain::{
+    audit::AuditRecord,
     finance::{Invoice, InvoiceStatus},
     order::{Address, OrderItem, OrderStatus, SalesOrder, ServiceTier},
+    rbac::{AuthUser, UserRole},
     tracking::TrackingTimelineEvent,
     transportation::{
         DeliveryRoute, Driver, DriverStatus, ProofOfDelivery, Vehicle, VehicleStatus, VehicleType,
@@ -16,6 +18,9 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct AppStateInner {
+    pub users: Vec<AuthUser>,
+    pub current_user: AuthUser,
+    pub audit_logs: Vec<AuditRecord>,
     pub orders: Vec<SalesOrder>,
     pub warehouses: Vec<Warehouse>,
     pub stocks: Vec<WarehouseStock>,
@@ -39,7 +44,54 @@ impl AppState {
     pub fn new() -> Self {
         let now = Utc::now();
 
-        // 1. Warehouses
+        // 1. RBAC Users Roster
+        let admin_id = Uuid::parse_str("00000000-0000-4000-8000-000000000001").unwrap();
+        let manager_id = Uuid::parse_str("00000000-0000-4000-8000-000000000002").unwrap();
+        let operator_id = Uuid::parse_str("00000000-0000-4000-8000-000000000003").unwrap();
+        let dispatcher_id = Uuid::parse_str("00000000-0000-4000-8000-000000000004").unwrap();
+        let auditor_id = Uuid::parse_str("00000000-0000-4000-8000-000000000005").unwrap();
+
+        let users = vec![
+            AuthUser {
+                user_id: admin_id,
+                full_name: "Alexander Hartono (Super Admin)".to_string(),
+                email: "alexander.hartono@elgs.enterprise.id".to_string(),
+                role: UserRole::SuperAdmin,
+                department: "Enterprise Operations".to_string(),
+            },
+            AuthUser {
+                user_id: manager_id,
+                full_name: "Diana Puspita (Logistics Manager)".to_string(),
+                email: "diana.puspita@elgs.enterprise.id".to_string(),
+                role: UserRole::LogisticsManager,
+                department: "Fulfillment Management".to_string(),
+            },
+            AuthUser {
+                user_id: operator_id,
+                full_name: "Farhan Maulana (Warehouse Lead)".to_string(),
+                email: "farhan.maulana@elgs.enterprise.id".to_string(),
+                role: UserRole::WarehouseOperator,
+                department: "Warehouse & Cryo Vault".to_string(),
+            },
+            AuthUser {
+                user_id: dispatcher_id,
+                full_name: "Satria Wicaksono (Fleet Dispatcher)".to_string(),
+                email: "satria.wicaksono@elgs.enterprise.id".to_string(),
+                role: UserRole::FleetDispatcher,
+                department: "Fleet Telematics".to_string(),
+            },
+            AuthUser {
+                user_id: auditor_id,
+                full_name: "Evelyn Wijaya (Finance Auditor)".to_string(),
+                email: "evelyn.wijaya@elgs.enterprise.id".to_string(),
+                role: UserRole::FinanceAuditor,
+                department: "Treasury & Internal Audit".to_string(),
+            },
+        ];
+
+        let current_user = users[0].clone();
+
+        // 2. Warehouses
         let warehouses = vec![
             Warehouse {
                 id: "WH-JKT-CENTRAL".to_string(),
@@ -79,7 +131,7 @@ impl AppState {
             },
         ];
 
-        // 2. Initial Stock
+        // 3. Initial Stock
         let stocks = vec![
             WarehouseStock {
                 sku: "MED-VAC-001".to_string(),
@@ -123,7 +175,7 @@ impl AppState {
             },
         ];
 
-        // 3. Vehicles
+        // 4. Vehicles
         let vehicles = vec![
             Vehicle {
                 id: "VH-REEFER-01".to_string(),
@@ -163,7 +215,7 @@ impl AppState {
             },
         ];
 
-        // 4. Drivers
+        // 5. Drivers
         let drivers = vec![
             Driver {
                 id: "DRV-101".to_string(),
@@ -187,20 +239,9 @@ impl AppState {
                 consecutive_driving_hours: 1.8,
                 fatigue_warning: false,
             },
-            Driver {
-                id: "DRV-103".to_string(),
-                name: "Dedi Suryadi".to_string(),
-                phone: "+62 811-9922-3311".to_string(),
-                license_type: "B2 Umum (Heavy)".to_string(),
-                status: DriverStatus::Ready,
-                rating: 4.96,
-                assigned_vehicle_id: None,
-                consecutive_driving_hours: 0.0,
-                fatigue_warning: false,
-            },
         ];
 
-        // 5. Initial Seed Orders
+        // 6. Orders
         let order_1_id = Uuid::new_v4();
         let order_1 = SalesOrder {
             id: order_1_id,
@@ -232,6 +273,8 @@ impl AppState {
             tracking_number: "TRK-ALPHA01".to_string(),
             total_amount: 52_500_000.0,
             total_weight_kg: 120.0,
+            created_by: Some(manager_id),
+            approved_by: Some(admin_id),
             notes: Some("Temperature sensitive: Keep between -25C and -15C".to_string()),
             created_at: now - Duration::hours(3),
             updated_at: now - Duration::minutes(20),
@@ -268,6 +311,8 @@ impl AppState {
             tracking_number: "TRK-BETA02".to_string(),
             total_amount: 370_000_000.0,
             total_weight_kg: 130.0,
+            created_by: Some(manager_id),
+            approved_by: None,
             notes: Some("Handle with care: fragile server equipment".to_string()),
             created_at: now - Duration::hours(1),
             updated_at: now - Duration::minutes(15),
@@ -304,71 +349,72 @@ impl AppState {
             tracking_number: "TRK-GAMMA03".to_string(),
             total_amount: 360_000_000.0,
             total_weight_kg: 180.0,
+            created_by: Some(manager_id),
+            approved_by: Some(admin_id),
             notes: None,
             created_at: now - Duration::hours(12),
             updated_at: now - Duration::minutes(40),
         };
 
-        // 6. Tracking Events
-        let tracking_events = vec![
-            TrackingTimelineEvent {
-                event_id: Uuid::new_v4(),
-                tracking_number: "TRK-ALPHA01".to_string(),
-                status: "PICKED".to_string(),
-                location_name: "WH-JKT-CENTRAL Cold Vault".to_string(),
-                description: "Vaccine cargo packed with dry ice logger (-20.4C verified)".to_string(),
-                timestamp: now - Duration::hours(2),
-            },
-            TrackingTimelineEvent {
-                event_id: Uuid::new_v4(),
-                tracking_number: "TRK-ALPHA01".to_string(),
-                status: "DISPATCHED".to_string(),
-                location_name: "Jakarta Hub Gate 4".to_string(),
-                description: "Cargo loaded onto Reefer Truck VH-REEFER-01 (Driver: Bambang P.)".to_string(),
-                timestamp: now - Duration::hours(1),
-            },
-            TrackingTimelineEvent {
-                event_id: Uuid::new_v4(),
-                tracking_number: "TRK-ALPHA01".to_string(),
-                status: "IN_TRANSIT".to_string(),
-                location_name: "Rasuna Said Corridor".to_string(),
-                description: "In transit with live cold telemetry monitoring".to_string(),
-                timestamp: now - Duration::minutes(20),
-            },
+        // 7. Initial SOC-2 Audit Trail
+        let audit_logs = vec![
+            AuditRecord::new(
+                admin_id,
+                "Alexander Hartono".to_string(),
+                "SuperAdmin".to_string(),
+                "SYSTEM_BOOTSTRAP".to_string(),
+                "ELGS_CORE".to_string(),
+                "INIT".to_string(),
+                None,
+                Some("Genesis state initialized with SOC-2 non-repudiation".to_string()),
+                "127.0.0.1".to_string(),
+            ),
+            AuditRecord::new(
+                manager_id,
+                "Diana Puspita".to_string(),
+                "LogisticsManager".to_string(),
+                "ORDER_CREATED".to_string(),
+                "SalesOrder".to_string(),
+                order_1_id.to_string(),
+                None,
+                Some(format!("Created sales order {}", order_1.order_number)),
+                "192.168.1.10".to_string(),
+            ),
+            AuditRecord::new(
+                admin_id,
+                "Alexander Hartono".to_string(),
+                "SuperAdmin".to_string(),
+                "ORDER_APPROVED".to_string(),
+                "SalesOrder".to_string(),
+                order_1_id.to_string(),
+                Some("Draft".to_string()),
+                Some("InventoryReserved - Maker-checker verified".to_string()),
+                "192.168.1.1".to_string(),
+            ),
         ];
 
-        // 7. Invoices
-        let invoices = vec![
-            Invoice {
-                invoice_id: Uuid::new_v4(),
-                invoice_number: "INV-2026-00812".to_string(),
-                order_id: order_1_id,
-                customer_id: "CUST-KIMIA-FARMA".to_string(),
-                customer_name: "PT Kimia Farma Diagnostics".to_string(),
-                subtotal: 52_500_000.0,
-                tax_amount: 5_775_000.0,
-                total_amount: 58_275_000.0,
-                status: InvoiceStatus::Issued,
-                due_date: now + Duration::days(14),
-                created_at: now - Duration::hours(2),
-            },
-            Invoice {
-                invoice_id: Uuid::new_v4(),
-                invoice_number: "INV-2026-00810".to_string(),
-                order_id: order_3_id,
-                customer_id: "CUST-PLN-NUSANTARA".to_string(),
-                customer_name: "PLN Nusantara Power".to_string(),
-                subtotal: 360_000_000.0,
-                tax_amount: 39_600_000.0,
-                total_amount: 399_600_000.0,
-                status: InvoiceStatus::Paid,
-                due_date: now + Duration::days(30),
-                created_at: now - Duration::hours(10),
-            },
-        ];
+        // 8. Invoices
+        let invoices = vec![Invoice {
+            invoice_id: Uuid::new_v4(),
+            invoice_number: "INV-2026-00812".to_string(),
+            order_id: order_1_id,
+            customer_id: "CUST-KIMIA-FARMA".to_string(),
+            customer_name: "PT Kimia Farma Diagnostics".to_string(),
+            subtotal: 52_500_000.0,
+            tax_amount: 5_775_000.0,
+            total_amount: 58_275_000.0,
+            status: InvoiceStatus::Issued,
+            created_by: Some(auditor_id),
+            settled_by: None,
+            due_date: now + Duration::days(14),
+            created_at: now - Duration::hours(2),
+        }];
 
         Self {
             inner: Arc::new(RwLock::new(AppStateInner {
+                users,
+                current_user,
+                audit_logs,
                 orders: vec![order_1, order_2, order_3],
                 warehouses,
                 stocks,
@@ -379,9 +425,34 @@ impl AppState {
                 drivers,
                 routes: vec![],
                 pods: vec![],
-                tracking_events,
+                tracking_events: vec![],
                 invoices,
             })),
         }
+    }
+
+    pub fn record_audit(
+        &self,
+        actor: &AuthUser,
+        action: &str,
+        resource_type: &str,
+        resource_id: &str,
+        before: Option<String>,
+        after: Option<String>,
+        ip: &str,
+    ) {
+        let record = AuditRecord::new(
+            actor.user_id,
+            actor.full_name.clone(),
+            actor.role.as_str().to_string(),
+            action.to_string(),
+            resource_type.to_string(),
+            resource_id.to_string(),
+            before,
+            after,
+            ip.to_string(),
+        );
+        let mut write = self.inner.write();
+        write.audit_logs.push(record);
     }
 }

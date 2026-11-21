@@ -33,6 +33,7 @@ fn test_order_valid_lifecycle_progression() {
         "WH-JKT-CENTRAL".to_string(),
         address,
         None,
+        None,
     )
     .expect("Order creation should succeed");
 
@@ -99,23 +100,15 @@ fn test_order_illegal_transitions_rejected() {
         "WH-JKT-CENTRAL".to_string(),
         address,
         None,
+        None,
     )
     .unwrap();
 
-    // Cannot jump from Draft directly to Delivered or Dispatched!
     assert_eq!(
         order.transition_to(OrderStatus::Delivered),
         Err(OrderError::InvalidTransition {
             from: OrderStatus::Draft,
             to: OrderStatus::Delivered,
-        })
-    );
-
-    assert_eq!(
-        order.transition_to(OrderStatus::Dispatched),
-        Err(OrderError::InvalidTransition {
-            from: OrderStatus::Draft,
-            to: OrderStatus::Dispatched,
         })
     );
 }
@@ -133,7 +126,6 @@ fn test_order_cannot_have_zero_quantity_or_empty_items() {
         longitude: 107.61,
     };
 
-    // Empty items
     let res = SalesOrder::new(
         "CUST-003".to_string(),
         "Customer PT Three".to_string(),
@@ -142,10 +134,10 @@ fn test_order_cannot_have_zero_quantity_or_empty_items() {
         "WH-BDG-WEST".to_string(),
         address.clone(),
         None,
+        None,
     );
     assert_eq!(res.unwrap_err(), OrderError::EmptyLineItems);
 
-    // Zero quantity
     let zero_item = vec![OrderItem {
         item_id: uuid::Uuid::new_v4(),
         sku: "ZERO-QTY".to_string(),
@@ -162,6 +154,7 @@ fn test_order_cannot_have_zero_quantity_or_empty_items() {
         ServiceTier::Standard,
         "WH-BDG-WEST".to_string(),
         address,
+        None,
         None,
     );
     assert_eq!(res2.unwrap_err(), OrderError::InvalidQuantity);

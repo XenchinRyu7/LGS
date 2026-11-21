@@ -13,7 +13,7 @@ pub enum StorageZone {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BinLocation {
-    pub bin_code: String, // e.g. "A-01-04" (Aisle-Rack-Shelf)
+    pub bin_code: String,
     pub zone: StorageZone,
     pub max_capacity_kg: f64,
     pub current_load_kg: f64,
@@ -39,7 +39,7 @@ impl WarehouseStock {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Warehouse {
-    pub id: String, // e.g. "WH-JKT-CENTRAL"
+    pub id: String,
     pub name: String,
     pub city: String,
     pub province: String,
@@ -69,7 +69,7 @@ pub struct StockTransferRequest {
     pub to_warehouse: String,
     pub sku: String,
     pub quantity: u32,
-    pub status: String, // "PENDING", "IN_TRANSIT", "COMPLETED"
+    pub status: String,
     pub created_at: DateTime<Utc>,
 }
 
@@ -81,7 +81,10 @@ pub struct StockOpnameAudit {
     pub system_count: u32,
     pub physical_count: u32,
     pub discrepancy: i32,
-    pub auditor_name: String,
+    pub counted_by: Uuid,
+    pub approved_by: Option<Uuid>,
+    pub status: String, // "PENDING_APPROVAL", "APPROVED", "REJECTED"
+    pub notes: Option<String>,
     pub timestamp: DateTime<Utc>,
 }
 
@@ -99,4 +102,8 @@ pub enum WarehouseError {
     },
     #[error("Bin {0} exceeded capacity limit")]
     BinOvercapacity(String),
+    #[error("Audit record not found: {0}")]
+    AuditNotFound(Uuid),
+    #[error("Audit record {0} has already been resolved with status {1}")]
+    AuditAlreadyResolved(Uuid, String),
 }

@@ -35,10 +35,9 @@ impl OrderStatus {
             (InTransit, OutForDelivery) => true,
             (OutForDelivery, Delivered) => true,
             (OutForDelivery, FailedDelivery) => true,
-            (FailedDelivery, OutForDelivery) => true, // Re-attempt delivery
-            (FailedDelivery, Returned) => true,     // Returned to hub
-            // Terminal states
-            (Delivered, Returned) => true,          // RMA reverse logistics
+            (FailedDelivery, OutForDelivery) => true,
+            (FailedDelivery, Returned) => true,
+            (Delivered, Returned) => true,
             _ => false,
         }
     }
@@ -56,6 +55,8 @@ pub enum OrderError {
     NotFound(Uuid),
     #[error("Insufficient stock for SKU {0}")]
     InsufficientStock(String),
+    #[error("Cannot modify order in status {0:?}. Only Draft or Confirmed orders can be modified.")]
+    CannotModifyNonDraft(OrderStatus),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -103,6 +104,8 @@ pub struct SalesOrder {
     pub tracking_number: String,
     pub total_amount: f64,
     pub total_weight_kg: f64,
+    pub created_by: Option<Uuid>,
+    pub approved_by: Option<Uuid>,
     pub notes: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -117,6 +120,7 @@ impl SalesOrder {
         origin_warehouse_id: String,
         delivery_address: Address,
         notes: Option<String>,
+        created_by: Option<Uuid>,
     ) -> Result<Self, OrderError> {
         if items.is_empty() {
             return Err(OrderError::EmptyLineItems);
@@ -149,10 +153,44 @@ impl SalesOrder {
             tracking_number,
             total_amount,
             total_weight_kg,
+            created_by,
+            approved_by: None,
             notes,
             created_at: now,
             updated_at: now,
         })
+    }
+
+    pub fn recalculate_totals(&mut self) {
+        self.total_amount = self.items.iter().map(|i| i.quantity as f64 * i.unit_price).sum();
+        self.total_weight_kg = self.items.iter().map(|i| i.quantity as f64 * i.weight_kg).sum();
+        self.updated_at = Utc::now();
+    }
+
+    pub fn update_details(
+        &mut self,
+        customer_name: Option<String>,
+        service_tier: Option<ServiceTier>,
+        delivery_address: Option<Address>,
+        notes: Option<String>,
+    ) -> Result<(), OrderError> {
+        if self.status != OrderStatus::Draft && self.status != OrderStatus::Confirmed {
+            return Err(OrderError::CannotModifyNonDraft(self.status.clone()));
+        }
+        if let Some(c) = customer_name {
+            self.customer_name = c;
+        }
+        if let Some(st) = service_tier {
+            self.service_tier = st;
+        }
+        if let Some(addr) = delivery_address {
+            self.delivery_address = addr;
+        }
+        if let Some(n) = notes {
+            self.notes = Some(n);
+        }
+        self.updated_at = Utc::now();
+        Ok(())
     }
 
     pub fn transition_to(&mut self, next: OrderStatus) -> Result<(), OrderError> {

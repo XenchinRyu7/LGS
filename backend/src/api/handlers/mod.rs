@@ -1,4 +1,5 @@
 pub mod analytics;
+pub mod auth;
 pub mod finance;
 pub mod orders;
 pub mod tracking;
@@ -12,8 +13,9 @@ use serde_json::json;
 pub async fn health_check() -> impl IntoResponse {
     Json(json!({
         "status": "healthy",
-        "service": "NexusLogistics Enterprise Engine",
-        "version": "1.0.0",
+        "service": "ELGS — Ethereal Logistics Management Engine",
+        "version": "2.0.0",
+        "architecture": "Enterprise DDD + Axum + Tokio + SoD Enforcer",
         "timestamp": chrono::Utc::now()
     }))
 }

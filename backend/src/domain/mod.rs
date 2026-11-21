@@ -1,6 +1,9 @@
 pub mod analytics;
+pub mod audit;
 pub mod finance;
 pub mod order;
+pub mod rbac;
+pub mod sod;
 pub mod tracking;
 pub mod transportation;
 pub mod warehouse;

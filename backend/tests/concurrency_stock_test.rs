@@ -7,11 +7,12 @@ use enterprise_logistics_backend::{
 #[tokio::test]
 async fn test_concurrent_stock_reservation_integrity() {
     let state = AppState::new();
+    let admin = state.inner.read().users[0].clone();
 
-    // Create 5 orders requesting 50 units each of MED-VAC-001 (initial on_hand 1200, reserved 150 -> available 1050)
     let handles: Vec<_> = (0..5)
         .map(|idx| {
             let state_clone = state.clone();
+            let admin_actor = admin.clone();
             tokio::spawn(async move {
                 let payload = CreateOrderPayload {
                     customer_id: format!("CONCURRENT-CUST-{}", idx),
@@ -40,8 +41,8 @@ async fn test_concurrent_stock_reservation_integrity() {
                     notes: None,
                 };
 
-                let order = OrderService::create_order(&state_clone, payload).unwrap();
-                OrderService::reserve_order_inventory(&state_clone, order.id)
+                let order = OrderService::create_order(&state_clone, &admin_actor, payload).unwrap();
+                OrderService::reserve_order_inventory(&state_clone, &admin_actor, order.id)
             })
         })
         .collect();
@@ -51,7 +52,6 @@ async fn test_concurrent_stock_reservation_integrity() {
         assert!(res.is_ok(), "Concurrent reservation must succeed within limits");
     }
 
-    // Verify atomic state: 150 original + (5 * 50 = 250) = 400 reserved
     let read = state.inner.read();
     let vaccine_stock = read
         .stocks
@@ -59,6 +59,7 @@ async fn test_concurrent_stock_reservation_integrity() {
         .find(|s| s.sku == "MED-VAC-001" && s.warehouse_id == "WH-JKT-CENTRAL")
         .unwrap();
 
+    // Initial 150 + (5 * 50 = 250) = 400 reserved
     assert_eq!(vaccine_stock.reserved, 400);
     assert_eq!(vaccine_stock.available(), 800);
 }

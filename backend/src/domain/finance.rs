@@ -37,22 +37,20 @@ pub struct ShippingRateQuoteResponse {
 
 impl ShippingRateQuoteRequest {
     pub fn calculate(&self) -> ShippingRateQuoteResponse {
-        // Industry standard IATA dimensional weight divisor: 5000 cm3/kg
         let volumetric_weight = (self.length_cm * self.width_cm * self.height_cm) / 5000.0;
         let chargeable_weight = self.actual_weight_kg.max(volumetric_weight).max(1.0);
 
-        // Distance & city base rate simulation
         let distance_factor = match (self.origin_city.as_str(), self.destination_city.as_str()) {
-            (a, b) if a == b => 15_000.0, // Intra-city
+            (a, b) if a == b => 15_000.0,
             ("Jakarta", "Bandung") | ("Bandung", "Jakarta") => 25_000.0,
             ("Jakarta", "Surabaya") | ("Surabaya", "Jakarta") => 45_000.0,
             _ => 35_000.0,
         };
 
         let base_rate = chargeable_weight * distance_factor;
-        let fuel_surcharge = base_rate * 0.05; // 5% fuel index
+        let fuel_surcharge = base_rate * 0.05;
         let cold_chain_surcharge = if self.requires_cold_chain {
-            base_rate * 0.35 // 35% specialized refrigeration
+            base_rate * 0.35
         } else {
             0.0
         };
@@ -89,9 +87,11 @@ pub struct Invoice {
     pub customer_id: String,
     pub customer_name: String,
     pub subtotal: f64,
-    pub tax_amount: f64, // 11% PPN
+    pub tax_amount: f64,
     pub total_amount: f64,
     pub status: InvoiceStatus,
+    pub created_by: Option<Uuid>,
+    pub settled_by: Option<Uuid>,
     pub due_date: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
 }
