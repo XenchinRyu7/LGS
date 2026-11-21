@@ -9,6 +9,7 @@ import {
   UserCheck,
   Database,
   X,
+  LogOut,
 } from 'lucide-react';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { LogisticsApi } from '../lib/api';
@@ -55,15 +56,32 @@ export function AppNavbar() {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   useEffect(() => {
-    LogisticsApi.getCurrentUser().then((data) => {
-      setCurrentUser(data.user);
-    });
+    const stored = LogisticsApi.getStoredUser();
+    if (stored) {
+      setCurrentUser(stored);
+    } else {
+      LogisticsApi.getCurrentUser().then((data) => {
+        setCurrentUser(data.user);
+      });
+    }
+
+    const handleAuthChanged = (e: any) => {
+      setCurrentUser(e.detail || null);
+    };
+    window.addEventListener('elgs:auth-changed', handleAuthChanged);
+    return () => window.removeEventListener('elgs:auth-changed', handleAuthChanged);
   }, []);
 
   const handleRoleChange = async (role: UserRole) => {
     const res = await LogisticsApi.switchRole(role);
     setCurrentUser(res.user);
     window.dispatchEvent(new CustomEvent('elgs:role-changed', { detail: res.user }));
+  };
+
+  const handleLogout = async () => {
+    await LogisticsApi.logout();
+    setCurrentUser(null);
+    window.dispatchEvent(new CustomEvent('elgs:auth-changed', { detail: null }));
   };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -86,7 +104,7 @@ export function AppNavbar() {
               </span>
             </div>
             <p className="text-[11px] text-muted-foreground hidden sm:block">
-              Distributed Logistics &bull; RBAC &bull; SoD Maker-Checker &bull; SOC-2 Audit
+              Enterprise Logistics Engine
             </p>
           </div>
         </div>
@@ -105,25 +123,47 @@ export function AppNavbar() {
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
           </button>
 
-          {/* Active RBAC Role Switcher */}
-          {currentUser && (
-            <div className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-2.5 py-1 text-xs">
-              <UserCheck className="h-3.5 w-3.5 text-primary" />
-              <label htmlFor="rbac-role-select" className="sr-only">Active RBAC Role</label>
-              <select
-                id="rbac-role-select"
-                value={currentUser.role}
-                onChange={(e) => handleRoleChange(e.target.value as UserRole)}
-                className="bg-transparent text-xs font-bold text-foreground focus:outline-none cursor-pointer"
-                title="Switch session persona to test SoD maker-checker boundaries"
+          {/* Active RBAC Role Switcher & Sign Out */}
+          {currentUser ? (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-2.5 py-1 text-xs">
+                <UserCheck className="h-3.5 w-3.5 text-primary" />
+                <label htmlFor="rbac-role-select" className="sr-only">Active RBAC Role</label>
+                <select
+                  id="rbac-role-select"
+                  value={currentUser.role}
+                  onChange={(e) => handleRoleChange(e.target.value as UserRole)}
+                  className="bg-transparent text-xs font-bold text-foreground focus:outline-none cursor-pointer"
+                  title="Switch session persona to test SoD maker-checker boundaries"
+                >
+                  <option value="SuperAdmin" className="bg-card text-card-foreground">Alexander H. (SuperAdmin)</option>
+                  <option value="LogisticsManager" className="bg-card text-card-foreground">Diana P. (LogisticsManager)</option>
+                  <option value="WarehouseOperator" className="bg-card text-card-foreground">Farhan M. (WarehouseOperator)</option>
+                  <option value="FleetDispatcher" className="bg-card text-card-foreground">Satria W. (FleetDispatcher)</option>
+                  <option value="FinanceAuditor" className="bg-card text-card-foreground">Evelyn W. (FinanceAuditor)</option>
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-2.5 py-1 text-xs font-semibold text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors"
+                title="Sign out of ELGS"
               >
-                <option value="SuperAdmin" className="bg-card text-card-foreground">Alexander H. (SuperAdmin)</option>
-                <option value="LogisticsManager" className="bg-card text-card-foreground">Diana P. (LogisticsManager)</option>
-                <option value="WarehouseOperator" className="bg-card text-card-foreground">Farhan M. (WarehouseOperator)</option>
-                <option value="FleetDispatcher" className="bg-card text-card-foreground">Satria W. (FleetDispatcher)</option>
-                <option value="FinanceAuditor" className="bg-card text-card-foreground">Evelyn W. (FinanceAuditor)</option>
-              </select>
+                <LogOut className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </button>
             </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('elgs:auth-changed', { detail: null }));
+              }}
+              className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 transition-all"
+            >
+              Sign In
+            </button>
           )}
 
           {/* Theme Switcher */}

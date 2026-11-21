@@ -15,6 +15,9 @@ import { FleetDispatch } from './modules/FleetDispatch';
 import { TrackingConsole } from './modules/TrackingConsole';
 import { FinanceLedger } from './modules/FinanceLedger';
 import { AuditTrailConsole } from './modules/AuditTrailConsole';
+import { LoginPage } from './auth/LoginPage';
+import { LogisticsApi } from '../lib/api';
+import type { AuthUser } from '../types/logistics';
 
 export type DashboardTab =
   | 'control-tower'
@@ -27,14 +30,35 @@ export type DashboardTab =
 
 export function EnterpriseDashboard() {
   const [activeTab, setActiveTab] = useState<DashboardTab>('control-tower');
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    return LogisticsApi.getStoredUser();
+  });
 
   useEffect(() => {
-    const handleRoleChanged = () => {
-      // Trigger refresh if needed
+    if (!currentUser) {
+      LogisticsApi.getCurrentUser().then((data) => {
+        setCurrentUser(data.user);
+      });
+    }
+
+    const handleAuthChanged = (e: any) => {
+      setCurrentUser(e.detail || null);
     };
+    const handleRoleChanged = (e: any) => {
+      if (e.detail) setCurrentUser(e.detail);
+    };
+
+    window.addEventListener('elgs:auth-changed', handleAuthChanged);
     window.addEventListener('elgs:role-changed', handleRoleChanged);
-    return () => window.removeEventListener('elgs:role-changed', handleRoleChanged);
+    return () => {
+      window.removeEventListener('elgs:auth-changed', handleAuthChanged);
+      window.removeEventListener('elgs:role-changed', handleRoleChanged);
+    };
   }, []);
+
+  if (!currentUser) {
+    return <LoginPage onLoginSuccess={(user) => setCurrentUser(user)} />;
+  }
 
   const tabs = [
     { id: 'control-tower', label: 'Control Tower', icon: Activity },

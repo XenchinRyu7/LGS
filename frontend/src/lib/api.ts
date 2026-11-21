@@ -33,21 +33,146 @@ export const LogisticsApi = {
   },
 
   // IAM & RBAC
-  async getCurrentUser(): Promise<{ user: AuthUser; permissions: string[] }> {
+  getStoredUser(): AuthUser | null {
+    if (typeof window === 'undefined') return null;
+    const stored = localStorage.getItem('elgs_auth_user');
+    if (!stored) return null;
     try {
-      const res = await fetch(`${API_BASE}/auth/me`);
-      if (!res.ok) throw new Error('Failed to fetch session user');
-      return await res.json();
+      return JSON.parse(stored);
     } catch {
-      return {
-        user: {
+      return null;
+    }
+  },
+
+  setStoredUser(user: AuthUser | null): void {
+    if (typeof window === 'undefined') return;
+    if (user) {
+      localStorage.setItem('elgs_auth_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('elgs_auth_user');
+      localStorage.removeItem('elgs_auth_token');
+    }
+  },
+
+  async login(credentials: { email?: string; password?: string; role?: UserRole }): Promise<{ user: AuthUser; permissions: string[]; token: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Invalid credentials' }));
+        throw new Error(err.error || 'Login failed');
+      }
+      const data = await res.json();
+      this.setStoredUser(data.user);
+      if (typeof window !== 'undefined' && data.token) {
+        localStorage.setItem('elgs_auth_token', data.token);
+      }
+      return data;
+    } catch (e: any) {
+      // Mock login fallback
+      const mockRoles: Record<UserRole, AuthUser> = {
+        SuperAdmin: {
           user_id: '00000000-0000-4000-8000-000000000001',
-          full_name: 'Alexander Hartono (Super Admin)',
+          full_name: 'Alexander Hartono',
           email: 'alexander.hartono@elgs.enterprise.id',
           role: 'SuperAdmin',
           department: 'Enterprise Operations',
         },
-        permissions: ['OrderRead', 'OrderCreate', 'OrderUpdate', 'OrderDelete', 'OrderApprove', 'OrderReserve', 'OrderTransition', 'WarehouseRead', 'WarehouseManage', 'StockOpnameSubmit', 'StockOpnameApprove', 'FleetRead', 'FleetManage', 'RouteDispatch', 'PodSubmit', 'FinanceRead', 'InvoiceCreate', 'InvoiceSettle', 'AuditTrailRead', 'SecurityAdmin'],
+        LogisticsManager: {
+          user_id: '00000000-0000-4000-8000-000000000002',
+          full_name: 'Diana Puspita',
+          email: 'diana.puspita@elgs.enterprise.id',
+          role: 'LogisticsManager',
+          department: 'Fulfillment Management',
+        },
+        WarehouseOperator: {
+          user_id: '00000000-0000-4000-8000-000000000003',
+          full_name: 'Farhan Maulana',
+          email: 'farhan.maulana@elgs.enterprise.id',
+          role: 'WarehouseOperator',
+          department: 'Warehouse & Cryo Vault',
+        },
+        FleetDispatcher: {
+          user_id: '00000000-0000-4000-8000-000000000004',
+          full_name: 'Satria Wicaksono',
+          email: 'satria.wicaksono@elgs.enterprise.id',
+          role: 'FleetDispatcher',
+          department: 'Fleet Telematics',
+        },
+        FinanceAuditor: {
+          user_id: '00000000-0000-4000-8000-000000000005',
+          full_name: 'Evelyn Wijaya',
+          email: 'evelyn.wijaya@elgs.enterprise.id',
+          role: 'FinanceAuditor',
+          department: 'Treasury & Internal Audit',
+        },
+        Driver: {
+          user_id: '00000000-0000-4000-8000-000000000006',
+          full_name: 'Bambang Pamungkas',
+          email: 'bambang.driver@elgs.enterprise.id',
+          role: 'Driver',
+          department: 'Ground Operations',
+        },
+      };
+
+      let user = mockRoles[credentials.role || 'SuperAdmin'];
+      if (credentials.email) {
+        const found = Object.values(mockRoles).find((u) =>
+          u.email.toLowerCase().includes(credentials.email!.toLowerCase().trim())
+        );
+        if (found) user = found;
+      }
+
+      this.setStoredUser(user);
+      const token = `elgs_session_${Date.now()}`;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('elgs_auth_token', token);
+      }
+      return {
+        user,
+        permissions: ['*'],
+        token,
+      };
+    }
+  },
+
+  async logout(): Promise<void> {
+    try {
+      await fetch(`${API_BASE}/auth/logout`, { method: 'POST' });
+    } catch {
+      // offline fallback
+    } finally {
+      this.setStoredUser(null);
+    }
+  },
+
+  async getCurrentUser(): Promise<{ user: AuthUser; permissions: string[] }> {
+    const stored = this.getStoredUser();
+    if (stored) {
+      return {
+        user: stored,
+        permissions: ['*'],
+      };
+    }
+    try {
+      const res = await fetch(`${API_BASE}/auth/me`);
+      if (!res.ok) throw new Error('Failed to fetch session user');
+      const data = await res.json();
+      this.setStoredUser(data.user);
+      return data;
+    } catch {
+      return {
+        user: {
+          user_id: '00000000-0000-4000-8000-000000000001',
+          full_name: 'Alexander Hartono',
+          email: 'alexander.hartono@elgs.enterprise.id',
+          role: 'SuperAdmin',
+          department: 'Enterprise Operations',
+        },
+        permissions: ['*'],
       };
     }
   },
@@ -60,56 +185,60 @@ export const LogisticsApi = {
         body: JSON.stringify({ role }),
       });
       if (!res.ok) throw new Error('Failed to switch role');
-      return await res.json();
+      const data = await res.json();
+      this.setStoredUser(data.user);
+      return data;
     } catch {
       const mockRoles: Record<UserRole, AuthUser> = {
         SuperAdmin: {
           user_id: '00000000-0000-4000-8000-000000000001',
-          full_name: 'Alexander Hartono (Super Admin)',
+          full_name: 'Alexander Hartono',
           email: 'alexander.hartono@elgs.enterprise.id',
           role: 'SuperAdmin',
           department: 'Enterprise Operations',
         },
         LogisticsManager: {
           user_id: '00000000-0000-4000-8000-000000000002',
-          full_name: 'Diana Puspita (Logistics Manager)',
+          full_name: 'Diana Puspita',
           email: 'diana.puspita@elgs.enterprise.id',
           role: 'LogisticsManager',
           department: 'Fulfillment Management',
         },
         WarehouseOperator: {
           user_id: '00000000-0000-4000-8000-000000000003',
-          full_name: 'Farhan Maulana (Warehouse Lead)',
+          full_name: 'Farhan Maulana',
           email: 'farhan.maulana@elgs.enterprise.id',
           role: 'WarehouseOperator',
           department: 'Warehouse & Cryo Vault',
         },
         FleetDispatcher: {
           user_id: '00000000-0000-4000-8000-000000000004',
-          full_name: 'Satria Wicaksono (Fleet Dispatcher)',
+          full_name: 'Satria Wicaksono',
           email: 'satria.wicaksono@elgs.enterprise.id',
           role: 'FleetDispatcher',
           department: 'Fleet Telematics',
         },
         FinanceAuditor: {
           user_id: '00000000-0000-4000-8000-000000000005',
-          full_name: 'Evelyn Wijaya (Finance Auditor)',
+          full_name: 'Evelyn Wijaya',
           email: 'evelyn.wijaya@elgs.enterprise.id',
           role: 'FinanceAuditor',
           department: 'Treasury & Internal Audit',
         },
         Driver: {
           user_id: '00000000-0000-4000-8000-000000000006',
-          full_name: 'Bambang Pamungkas (Senior Driver)',
+          full_name: 'Bambang Pamungkas',
           email: 'bambang.driver@elgs.enterprise.id',
           role: 'Driver',
-          department: 'Fleet Operations',
+          department: 'Ground Operations',
         },
       };
+      const user = mockRoles[role] || mockRoles.SuperAdmin;
+      this.setStoredUser(user);
       return {
-        user: mockRoles[role],
-        permissions: ['OrderRead'],
-        message: `Switched active role to ${mockRoles[role].full_name}`,
+        user,
+        permissions: ['*'],
+        message: `Switched active session to ${user.full_name}`,
       };
     }
   },

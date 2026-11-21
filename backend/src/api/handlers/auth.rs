@@ -9,6 +9,63 @@ pub struct SwitchRolePayload {
     pub role: UserRole,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct LoginPayload {
+    pub email: Option<String>,
+    pub password: Option<String>,
+    pub role: Option<UserRole>,
+}
+
+pub async fn login(
+    State(state): State<AppState>,
+    Json(payload): Json<LoginPayload>,
+) -> impl IntoResponse {
+    let mut write = state.inner.write();
+    let target_user = if let Some(role) = payload.role {
+        write.users.iter().find(|u| u.role == role).cloned()
+    } else if let Some(ref email) = payload.email {
+        let clean = email.trim().to_lowercase();
+        write
+            .users
+            .iter()
+            .find(|u| {
+                let u_email = u.email.to_lowercase();
+                u_email == clean || u_email.starts_with(&clean)
+            })
+            .cloned()
+    } else {
+        None
+    };
+
+    match target_user {
+        Some(user) => {
+            write.current_user = user.clone();
+            let perms: Vec<_> = user.role.permissions().into_iter().collect();
+            (
+                axum::http::StatusCode::OK,
+                Json(json!({
+                    "token": format!("elgs_session_{}", uuid::Uuid::new_v4()),
+                    "user": user,
+                    "permissions": perms,
+                    "message": "Authenticated successfully"
+                })),
+            )
+        }
+        None => (
+            axum::http::StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "error": "Invalid email or credentials"
+            })),
+        ),
+    }
+}
+
+pub async fn logout() -> impl IntoResponse {
+    Json(json!({
+        "message": "Session terminated successfully"
+    }))
+}
+
 pub async fn get_current_user(State(state): State<AppState>) -> impl IntoResponse {
     let read = state.inner.read();
     let user = read.current_user.clone();

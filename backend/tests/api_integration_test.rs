@@ -86,3 +86,45 @@ async fn test_api_tracking_query() {
     assert_eq!(json["tracking_number"], "TRK-ALPHA01");
     assert!(json["live_telemetry"].is_object());
 }
+
+#[tokio::test]
+async fn test_api_auth_login_and_logout() {
+    let state = AppState::new();
+    let app = create_router(state);
+
+    // 1. Valid Login
+    let payload = serde_json::json!({
+        "email": "diana.puspita@elgs.enterprise.id"
+    });
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/auth/login")
+                .header("content-type", "application/json")
+                .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json["user"]["role"], "LogisticsManager");
+    assert!(json["token"].is_string());
+
+    // 2. Logout
+    let logout_resp = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/auth/logout")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(logout_resp.status(), StatusCode::OK);
+}
