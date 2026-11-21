@@ -5,12 +5,11 @@ interface Props {
 }
 
 const {
-  title = "ELGS — Ethereal Logistics Management System (Enterprise Grade)",
-  description = "Production-grade, distributed multi-tier logistics management system with Astro 5, Ethereal UI, and Rust Axum backend."
+  title = "ELGS — Logistics Management System",
+  description = "Modern distributed logistics management system with Astro 5, Ethereal UI, and Rust Axum backend."
 } = Astro.props;
 
 import '../styles/globals.css';
-import { AppNavbar } from '../components/AppNavbar';
 ---
 
 <!doctype html>
@@ -25,16 +24,7 @@ import { AppNavbar } from '../components/AppNavbar';
     <!-- Dynamic OKLCH Theme Injector Link -->
     <link id="ethereal-active-theme" rel="stylesheet" href="" />
   </head>
-  <body class="bg-background text-foreground antialiased min-h-screen flex flex-col font-sans selection:bg-primary selection:text-primary-foreground">
-    <AppNavbar client:load />
-    <main class="flex-1 mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-8">
-      <slot />
-    </main>
-    <footer class="border-t border-border bg-card/40 py-6 text-center text-xs text-muted-foreground">
-      <div class="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-        <p>ELGS (Ethereal Logistics Management System) v2.4 &bull; Ethereal UI &amp; Rust Axum Engine</p>
-        <p class="font-mono text-[11px]">Strict WCAG 2.1 AA Compliant &bull; OKLCH Theming</p>
-      </div>
-    </footer>
+  <body class="bg-background text-foreground antialiased min-h-screen font-sans selection:bg-primary selection:text-primary-foreground">
+    <slot />
   </body>
 </html>

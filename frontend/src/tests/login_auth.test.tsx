@@ -4,7 +4,7 @@ import React from 'react';
 import { LoginPage } from '../components/auth/LoginPage';
 
 describe('LoginPage Component', () => {
-  it('renders clean login card, credentials inputs, and quick personas', () => {
+  it('renders clean login card and credentials inputs', () => {
     const onLoginSuccess = vi.fn();
     render(<LoginPage onLoginSuccess={onLoginSuccess} />);
 
@@ -12,17 +12,14 @@ describe('LoginPage Component', () => {
     expect(screen.getByLabelText(/Email Address/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Password/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Sign In/i })).toBeInTheDocument();
-    expect(screen.getByText(/Quick Persona Access/i)).toBeInTheDocument();
   });
 
-  it('allows 1-click persona sign in for Diana Puspita', async () => {
+  it('allows selecting demo persona', async () => {
     const onLoginSuccess = vi.fn();
     render(<LoginPage onLoginSuccess={onLoginSuccess} />);
 
-    const dianaBtn = screen.getByText('Diana Puspita').closest('button');
-    expect(dianaBtn).toBeInTheDocument();
-    if (dianaBtn) {
-      fireEvent.click(dianaBtn);
-    }
+    const select = screen.getByLabelText(/Demo Persona/i);
+    expect(select).toBeInTheDocument();
+    fireEvent.change(select, { target: { value: 'LogisticsManager' } });
   });
 });
