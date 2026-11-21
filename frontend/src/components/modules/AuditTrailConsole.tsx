@@ -4,8 +4,6 @@ import {
   ShieldCheck,
   Search,
   Filter,
-  Clock,
-  Database,
   RefreshCw,
   AlertTriangle,
 } from 'lucide-react';

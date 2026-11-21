@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Boxes, Lock, Mail, Eye, EyeOff, ArrowRight, AlertCircle, ShieldCheck } from 'lucide-react';
 import { LogisticsApi } from '../../lib/api';
-import type { AuthUser, UserRole } from '../../types/logistics';
+import type { AuthUser } from '../../types/logistics';
 
 interface LoginPageProps {
   onLoginSuccess: (user: AuthUser) => void;
@@ -25,20 +25,6 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
       onLoginSuccess(res.user);
     } catch (err: any) {
       setError(err.message || 'Invalid credentials');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDemoSelect = async (role: UserRole) => {
-    setError(null);
-    setLoading(true);
-    try {
-      const res = await LogisticsApi.login({ role });
-      window.dispatchEvent(new CustomEvent('elgs:auth-changed', { detail: res.user }));
-      onLoginSuccess(res.user);
-    } catch (err: any) {
-      setError(err.message || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -80,7 +66,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@elgs.id"
+                  placeholder="name@elgs.enterprise.id"
                   className="w-full rounded-xl border border-border bg-background py-2 pl-9 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
                 />
               </div>
@@ -96,7 +82,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                   tabIndex={-1}
                   className="text-[11px] text-muted-foreground hover:text-primary transition-colors"
                 >
-                  Forgot?
+                  Forgot password?
                 </button>
               </div>
               <div className="relative">
@@ -148,29 +134,6 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
               )}
             </button>
           </form>
-
-          {/* Discreet Demo Switcher */}
-          <div className="pt-4 border-t border-border flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Demo Persona:</span>
-            <label htmlFor="demo-persona-select" className="sr-only">Demo Persona</label>
-            <select
-              id="demo-persona-select"
-              aria-label="Demo Persona"
-              defaultValue="SuperAdmin"
-              onChange={(e) => {
-                if (e.target.value) {
-                  handleDemoSelect(e.target.value as UserRole);
-                }
-              }}
-              className="rounded-lg border border-border bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-            >
-              <option value="SuperAdmin">Alexander Hartono (SuperAdmin)</option>
-              <option value="LogisticsManager">Diana Puspita (LogisticsManager)</option>
-              <option value="WarehouseOperator">Farhan Maulana (WarehouseOperator)</option>
-              <option value="FleetDispatcher">Satria Wicaksono (FleetDispatcher)</option>
-              <option value="FinanceAuditor">Evelyn Wijaya (FinanceAuditor)</option>
-            </select>
-          </div>
         </div>
 
         <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">

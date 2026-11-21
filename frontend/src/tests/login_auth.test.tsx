@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 import { LoginPage } from '../components/auth/LoginPage';
 
@@ -14,12 +14,20 @@ describe('LoginPage Component', () => {
     expect(screen.getByRole('button', { name: /^Sign In/i })).toBeInTheDocument();
   });
 
-  it('allows selecting demo persona', async () => {
+  it('authenticates user on form submission', async () => {
     const onLoginSuccess = vi.fn();
     render(<LoginPage onLoginSuccess={onLoginSuccess} />);
 
-    const select = screen.getByLabelText(/Demo Persona/i);
-    expect(select).toBeInTheDocument();
-    fireEvent.change(select, { target: { value: 'LogisticsManager' } });
+    const emailInput = screen.getByLabelText(/Email Address/i);
+    const passwordInput = screen.getByLabelText(/Password/i);
+    const submitBtn = screen.getByRole('button', { name: /^Sign In/i });
+
+    fireEvent.change(emailInput, { target: { value: 'diana.puspita@elgs.enterprise.id' } });
+    fireEvent.change(passwordInput, { target: { value: 'password123' } });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(onLoginSuccess).toHaveBeenCalled();
+    });
   });
 });

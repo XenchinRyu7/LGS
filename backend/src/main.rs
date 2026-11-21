@@ -5,6 +5,11 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // 1. Load root .env or local .env
+    dotenvy::dotenv().ok();
+    if std::path::Path::new("../.env").exists() {
+        dotenvy::from_path("../.env").ok();
+    }
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -15,6 +20,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let state = AppState::new();
     let app = api::create_router(state);
+
+    if let Ok(db_url) = std::env::var("DATABASE_URL") {
+        if !db_url.trim().is_empty() {
+            info!("📦 Database configuration loaded from environment");
+        }
+    }
+    if let Ok(redis_url) = std::env::var("REDIS_URL") {
+        if !redis_url.trim().is_empty() {
+            info!("⚡ Redis configuration loaded from environment");
+        }
+    }
 
     let port = std::env::var("PORT")
         .unwrap_or_else(|_| "8080".to_string())

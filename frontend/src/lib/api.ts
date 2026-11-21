@@ -139,6 +139,14 @@ export const LogisticsApi = {
     }
   },
 
+  async updateProfile(updates: Partial<AuthUser>): Promise<AuthUser> {
+    const current = this.getStoredUser();
+    if (!current) throw new Error('Not authenticated');
+    const updated = { ...current, ...updates };
+    this.setStoredUser(updated);
+    return updated;
+  },
+
   async logout(): Promise<void> {
     try {
       await fetch(`${API_BASE}/auth/logout`, { method: 'POST' });
@@ -149,7 +157,7 @@ export const LogisticsApi = {
     }
   },
 
-  async getCurrentUser(): Promise<{ user: AuthUser; permissions: string[] }> {
+  async getCurrentUser(): Promise<{ user: AuthUser; permissions: string[] } | null> {
     const stored = this.getStoredUser();
     if (stored) {
       return {
@@ -157,24 +165,7 @@ export const LogisticsApi = {
         permissions: ['*'],
       };
     }
-    try {
-      const res = await fetch(`${API_BASE}/auth/me`);
-      if (!res.ok) throw new Error('Failed to fetch session user');
-      const data = await res.json();
-      this.setStoredUser(data.user);
-      return data;
-    } catch {
-      return {
-        user: {
-          user_id: '00000000-0000-4000-8000-000000000001',
-          full_name: 'Alexander Hartono',
-          email: 'alexander.hartono@elgs.enterprise.id',
-          role: 'SuperAdmin',
-          department: 'Enterprise Operations',
-        },
-        permissions: ['*'],
-      };
-    }
+    return null;
   },
 
   async switchRole(role: UserRole): Promise<{ user: AuthUser; permissions: string[]; message: string }> {

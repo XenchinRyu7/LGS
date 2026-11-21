@@ -12,15 +12,13 @@ import {
   ChevronRight,
   Menu,
   X,
-  Search,
   Bell,
-  Database,
   LogOut,
-  UserCheck,
   ChevronDown,
   CheckCircle2,
   AlertTriangle,
   Radio,
+  User,
 } from 'lucide-react';
 import { ControlTower } from './modules/ControlTower';
 import { OrderManagement } from './modules/OrderManagement';
@@ -30,9 +28,10 @@ import { TrackingConsole } from './modules/TrackingConsole';
 import { FinanceLedger } from './modules/FinanceLedger';
 import { AuditTrailConsole } from './modules/AuditTrailConsole';
 import { LoginPage } from './auth/LoginPage';
+import { ProfileModal } from './profile/ProfileModal';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { LogisticsApi } from '../lib/api';
-import type { AuthUser, UserRole } from '../types/logistics';
+import type { AuthUser } from '../types/logistics';
 
 export type DashboardTab =
   | 'control-tower'
@@ -57,8 +56,8 @@ export function EnterpriseDashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [dbModalOpen, setDbModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
     return LogisticsApi.getStoredUser();
   });
@@ -94,21 +93,11 @@ export function EnterpriseDashboard() {
   ]);
 
   useEffect(() => {
-    if (!currentUser) {
-      LogisticsApi.getCurrentUser().then((data) => {
-        setCurrentUser(data.user);
-      });
-    }
-
     const handleAuthChanged = (e: any) => {
       setCurrentUser(e.detail || null);
     };
-    const handleRoleChanged = (e: any) => {
-      if (e.detail) setCurrentUser(e.detail);
-    };
 
     window.addEventListener('elgs:auth-changed', handleAuthChanged);
-    window.addEventListener('elgs:role-changed', handleRoleChanged);
 
     const handleClickOutside = (e: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
@@ -122,23 +111,14 @@ export function EnterpriseDashboard() {
 
     return () => {
       window.removeEventListener('elgs:auth-changed', handleAuthChanged);
-      window.removeEventListener('elgs:role-changed', handleRoleChanged);
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [currentUser]);
-
-  const handleRoleChange = async (role: UserRole) => {
-    const res = await LogisticsApi.switchRole(role);
-    setCurrentUser(res.user);
-    setProfileDropdownOpen(false);
-    window.dispatchEvent(new CustomEvent('elgs:role-changed', { detail: res.user }));
-  };
+  }, []);
 
   const handleLogout = async () => {
     await LogisticsApi.logout();
     setCurrentUser(null);
     setProfileDropdownOpen(false);
-    window.dispatchEvent(new CustomEvent('elgs:auth-changed', { detail: null }));
   };
 
   if (!currentUser) {
@@ -301,20 +281,8 @@ export function EnterpriseDashboard() {
             </div>
           </div>
 
-          {/* Right: Search, Database, Theme, Notifications, Profile Dropdown */}
+          {/* Right: Theme, Notifications, Profile Dropdown */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Database Status Button */}
-            <button
-              type="button"
-              onClick={() => setDbModalOpen(true)}
-              className="hidden md:flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground hover:border-primary/50 transition-colors"
-              title="Database & Redis Topology"
-            >
-              <Database className="h-3.5 w-3.5 text-primary" />
-              <span className="font-medium text-foreground">Supabase &bull; Upstash</span>
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            </button>
-
             {/* Theme Switcher */}
             <ThemeSwitcher />
 
@@ -369,7 +337,7 @@ export function EnterpriseDashboard() {
               )}
             </div>
 
-            {/* ─── REAL PROFILE DROPDOWN ─── */}
+            {/* ─── REAL PROFILE DROPDOWN (NO PERSONA SWITCHING GIMMICK) ─── */}
             <div className="relative" ref={profileRef}>
               <button
                 type="button"
@@ -381,7 +349,7 @@ export function EnterpriseDashboard() {
                 </div>
                 <div className="hidden sm:flex flex-col text-left">
                   <span className="text-xs font-semibold text-foreground leading-tight">
-                    {currentUser.full_name.split(' ')[0]}
+                    {currentUser.full_name}
                   </span>
                   <span className="text-[10px] text-muted-foreground leading-tight">
                     {currentUser.role}
@@ -396,40 +364,24 @@ export function EnterpriseDashboard() {
                   <div className="pb-2 border-b border-border">
                     <div className="font-semibold text-xs text-foreground">{currentUser.full_name}</div>
                     <div className="text-[11px] text-muted-foreground truncate">{currentUser.email}</div>
-                    <div className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-                      <UserCheck className="h-3 w-3" />
+                    <div className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-mono font-medium text-primary">
                       <span>{currentUser.role}</span>
                     </div>
                   </div>
 
-                  {/* Switch Persona Submenu */}
+                  {/* Real Profile Management Action */}
                   <div className="space-y-1">
-                    <div className="text-[10px] font-semibold text-muted-foreground px-1 uppercase tracking-wider">
-                      Switch Persona
-                    </div>
-                    {(
-                      [
-                        { role: 'SuperAdmin', label: 'Alexander H. (SuperAdmin)' },
-                        { role: 'LogisticsManager', label: 'Diana P. (LogisticsManager)' },
-                        { role: 'WarehouseOperator', label: 'Farhan M. (WarehouseLead)' },
-                        { role: 'FleetDispatcher', label: 'Satria W. (FleetDispatcher)' },
-                        { role: 'FinanceAuditor', label: 'Evelyn W. (FinanceAuditor)' },
-                      ] as const
-                    ).map((p) => (
-                      <button
-                        key={p.role}
-                        type="button"
-                        onClick={() => handleRoleChange(p.role)}
-                        className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-colors ${
-                          currentUser.role === p.role
-                            ? 'bg-primary/15 text-primary font-semibold'
-                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                        }`}
-                      >
-                        <span>{p.label}</span>
-                        {currentUser.role === p.role && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
-                      </button>
-                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        setProfileModalOpen(true);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-foreground hover:bg-muted transition-colors"
+                    >
+                      <User className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>Profile &amp; Account Settings</span>
+                    </button>
                   </div>
 
                   {/* Sign Out */}
@@ -437,7 +389,7 @@ export function EnterpriseDashboard() {
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors"
                     >
                       <LogOut className="h-3.5 w-3.5" />
                       <span>Sign Out</span>
@@ -463,62 +415,13 @@ export function EnterpriseDashboard() {
         </main>
       </div>
 
-      {/* Supabase & Upstash Topology Modal */}
-      {dbModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-border">
-              <div className="flex items-center gap-2 font-bold text-sm text-foreground">
-                <Database className="h-4 w-4 text-primary" />
-                <span>Database &amp; Redis Topology</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setDbModalOpen(false)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="rounded-xl border border-border bg-background p-3.5 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-foreground">Supabase PostgreSQL</span>
-                  <span className="inline-flex items-center gap-1 text-[11px] text-emerald-500 font-medium">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                    Pooler Ready
-                  </span>
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Port 6543 pooler with 9 relational tables, foreign key constraints, and SoD boundary enforcement.
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-border bg-background p-3.5 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-foreground">Upstash Redis</span>
-                  <span className="inline-flex items-center gap-1 text-[11px] text-emerald-500 font-medium">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                    Active
-                  </span>
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Serverless Redis caching telemetry streams and distributed lock reservations.
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setDbModalOpen(false)}
-              className="w-full rounded-xl bg-primary py-2 text-xs font-semibold text-primary-foreground hover:opacity-90"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Profile Management Modal */}
+      <ProfileModal
+        user={currentUser}
+        isOpen={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        onUserUpdated={(updated) => setCurrentUser(updated)}
+      />
     </div>
   );
 }
