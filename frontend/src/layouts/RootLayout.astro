@@ -1,0 +1,40 @@
+---
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = "NexusLogistics — Enterprise Logistics & Cryo-Telemetry Engine",
+  description = "Production-grade, distributed multi-tier logistics management system with Astro, Ethereal UI, and Rust backend."
+} = Astro.props;
+
+import '../styles/globals.css';
+import { AppNavbar } from '../components/AppNavbar';
+---
+
+<!doctype html>
+<html lang="en" class="dark" data-color-theme="default">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <title>{title}</title>
+    <!-- Dynamic OKLCH Theme Injector Link -->
+    <link id="ethereal-active-theme" rel="stylesheet" href="" />
+  </head>
+  <body class="bg-background text-foreground antialiased min-h-screen flex flex-col font-sans selection:bg-primary selection:text-primary-foreground">
+    <AppNavbar client:load />
+    <main class="flex-1 mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-8">
+      <slot />
+    </main>
+    <footer class="border-t border-border bg-card/40 py-6 text-center text-xs text-muted-foreground">
+      <div class="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <p>NexusLogistics Enterprise v2.0 &bull; Ethereal UI &amp; Rust Axum Engine</p>
+        <p class="font-mono text-[11px]">Strict WCAG 2.1 AA Compliant &bull; OKLCH Theming</p>
+      </div>
+    </footer>
+  </body>
+</html>
