@@ -1,0 +1,7 @@
+#!/bin/sh
+if [ -d "backend" ]; then
+  npm run test:backend
+fi
+if [ -d "frontend" ]; then
+  npm run test:frontend
+fi
