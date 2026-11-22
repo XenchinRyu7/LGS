@@ -1,0 +1,299 @@
+{
+  "info": {
+    "_postman_id": "c1f7a42b-5872-4d2b-9e4a-4e4b52b2b111",
+    "name": "ELGS Enterprise — Developer Sandbox API",
+    "description": "Official Postman Collection for ELGS Developer Sandbox. All endpoints in this collection operate exclusively in-memory without issuing any write operations to the PostgreSQL database (`X-Database-Write: skipped`). Ideal for QA testing, 3rd-party logistics integration, and client demo simulations.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{sandbox_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01. Authentication & Developer Token",
+      "item": [
+        {
+          "name": "Generate Sandbox Developer Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Verify Sandbox Headers\", function () {",
+                  "    pm.response.to.have.header(\"X-ELGS-Environment\", \"sandbox\");",
+                  "    pm.response.to.have.header(\"X-Database-Write\", \"skipped\");",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access_token) {",
+                  "    pm.environment.set(\"sandbox_token\", jsonData.access_token);",
+                  "    console.log(\"Saved sandbox_token:\", jsonData.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"SuperAdmin\",\n  \"developer_id\": \"dev_ethereal_postman\",\n  \"client_id\": \"elgs_sandbox_client\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/sandbox/auth/token",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sandbox", "auth", "token"]
+            },
+            "description": "Generates a synthetic developer sandbox JWT bearer token. Auto-updates the `sandbox_token` variable in your active Postman Environment."
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Environment & Status",
+      "item": [
+        {
+          "name": "Get Sandbox Status & Isolation Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Database Write is Skipped\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"X-Database-Write\")).to.eql(\"skipped\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sandbox/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sandbox", "status"]
+            },
+            "description": "Verifies that the ELGS Sandbox engine is active, strictly isolated in-memory, and confirming zero database mutations."
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. Sales Orders & State Machine",
+      "item": [
+        {
+          "name": "List Simulated Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sandbox/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sandbox", "orders"]
+            },
+            "description": "Lists all active simulated orders residing in the sandbox session state."
+          }
+        },
+        {
+          "name": "Create Sandbox Order (Simulation)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.order && jsonData.order.id) {",
+                  "    pm.environment.set(\"sandbox_order_id\", jsonData.order.id);",
+                  "    pm.environment.set(\"sandbox_tracking_number\", jsonData.order.tracking_number);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": \"CUST-POSTMAN-001\",\n  \"customer_name\": \"PT Indofarma Global Medika\",\n  \"service_tier\": \"ColdChainPriority\",\n  \"origin_warehouse_id\": \"WH-SBX-CGK-01\",\n  \"delivery_address\": {\n    \"recipient_name\": \"Dr. Raditya Pratama\",\n    \"phone\": \"+62 812-9988-7766\",\n    \"street\": \"Jl. Dr. Cipto Mangunkusumo No. 71\",\n    \"city\": \"Jakarta Pusat\",\n    \"province\": \"DKI Jakarta\",\n    \"postal_code\": \"10430\",\n    \"latitude\": -6.1975,\n    \"longitude\": 106.8488\n  },\n  \"items\": [\n    {\n      \"sku\": \"SBX-BIO-VAC-001\",\n      \"name\": \"mRNA Bio-Vaccine Ultra Cold Vials\",\n      \"quantity\": 200,\n      \"unit_price\": 250000,\n      \"weight_kg\": 0.25,\n      \"volume_cbm\": 0.001\n    }\n  ],\n  \"notes\": \"Sandbox simulation order via Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/sandbox/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sandbox", "orders"]
+            },
+            "description": "Simulates creating a logistics sales order with automatic volumetric weight & cold-chain freight surcharge calculation. Does not write to DB."
+          }
+        },
+        {
+          "name": "Get Sandbox Order by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sandbox/orders/{{sandbox_order_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sandbox", "orders", "{{sandbox_order_id}}"]
+            },
+            "description": "Retrieves the simulated order details."
+          }
+        },
+        {
+          "name": "Transition Order Status (SoD Validation)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_status\": \"Confirmed\",\n  \"actor_role\": \"ProjectManager\",\n  \"notes\": \"Order confirmed by Project Manager under Maker-Checker rule\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/sandbox/orders/{{sandbox_order_id}}/transition",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sandbox", "orders", "{{sandbox_order_id}}", "transition"]
+            },
+            "description": "Simulates transitioning the order through its state machine lifecycle while enforcing Segregation of Duties (SoD) maker-checker rules."
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Live GPS & Cold-Chain Telematics",
+      "item": [
+        {
+          "name": "Query Live Tracking & IoT Probe Stream",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sandbox/tracking/{{sandbox_tracking_number}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sandbox", "tracking", "{{sandbox_tracking_number}}"]
+            },
+            "description": "Returns simulated live GPS coordinates, vehicle speed, temperature telemetry (-72.4°C), and waypoint breadcrumbs."
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. Warehouse Hubs & Stock Opname",
+      "item": [
+        {
+          "name": "List Sandbox Warehouses & Stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sandbox/warehouses",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sandbox", "warehouses"]
+            },
+            "description": "Lists simulated multi-zone warehouse hubs and inventory stock levels."
+          }
+        },
+        {
+          "name": "Simulate Stock Opname & Discrepancy Escalation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouse_id\": \"WH-SBX-CGK-01\",\n  \"sku\": \"SBX-BIO-VAC-001\",\n  \"system_count\": 5000,\n  \"physical_count\": 4940,\n  \"counted_by_role\": \"WarehouseOperator\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/sandbox/stock/opname",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sandbox", "stock", "opname"]
+            },
+            "description": "Simulates physical inventory counting with discrepancy calculation and dual-control SoD rule evaluation."
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. Billing & Invoice Settlement",
+      "item": [
+        {
+          "name": "Simulate Payment Gateway Webhook / Settlement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invoice_id\": \"{{sandbox_invoice_id}}\",\n  \"payment_method\": \"VIRTUAL_ACCOUNT_MANDIRI\",\n  \"amount_paid\": 138750000.0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/sandbox/finance/settle",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sandbox", "finance", "settle"]
+            },
+            "description": "Simulates a payment settlement webhook callback from a banking gateway (BCA, Mandiri, Permata Virtual Account), generating a synthetic transaction hash."
+          }
+        }
+      ]
+    },
+    {
+      "name": "07. Sandbox Administration",
+      "item": [
+        {
+          "name": "Reset Sandbox Session to Baseline",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sandbox/reset",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sandbox", "reset"]
+            },
+            "description": "Resets all sandbox orders, telemetry, and invoices back to the pristine baseline fixtures."
+          }
+        }
+      ]
+    }
+  ]
+}

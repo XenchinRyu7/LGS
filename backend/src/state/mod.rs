@@ -17,6 +17,9 @@ use parking_lot::RwLock;
 use std::sync::Arc;
 use uuid::Uuid;
 
+pub mod sandbox;
+use sandbox::SandboxState;
+
 pub struct AppStateInner {
     pub db: Option<sqlx::PgPool>,
     pub users: Vec<AuthUser>,
@@ -39,6 +42,7 @@ pub struct AppStateInner {
 #[derive(Clone)]
 pub struct AppState {
     pub inner: Arc<RwLock<AppStateInner>>,
+    pub sandbox: Arc<RwLock<SandboxState>>,
 }
 
 impl Default for AppState {
@@ -401,6 +405,7 @@ impl AppState {
                 tracking_events: vec![],
                 invoices,
             })),
+            sandbox: Arc::new(RwLock::new(SandboxState::new())),
         }
     }
 

@@ -105,6 +105,50 @@ pub fn create_router(state: AppState) -> Router {
             "/api/v1/finance/invoices/:id/settle",
             post(handlers::finance::settle_invoice),
         )
+        // =====================================================================
+        // Developer Sandbox API (Isolated In-Memory Simulation — No DB Writes)
+        // =====================================================================
+        .route(
+            "/api/v1/sandbox/status",
+            get(handlers::sandbox::get_sandbox_status),
+        )
+        .route(
+            "/api/v1/sandbox/auth/token",
+            post(handlers::sandbox::generate_sandbox_token),
+        )
+        .route(
+            "/api/v1/sandbox/orders",
+            get(handlers::sandbox::list_sandbox_orders)
+                .post(handlers::sandbox::create_sandbox_order),
+        )
+        .route(
+            "/api/v1/sandbox/orders/:id",
+            get(handlers::sandbox::get_sandbox_order),
+        )
+        .route(
+            "/api/v1/sandbox/orders/:id/transition",
+            post(handlers::sandbox::transition_sandbox_order),
+        )
+        .route(
+            "/api/v1/sandbox/tracking/:tracking_number",
+            get(handlers::sandbox::get_sandbox_tracking),
+        )
+        .route(
+            "/api/v1/sandbox/warehouses",
+            get(handlers::sandbox::list_sandbox_warehouses),
+        )
+        .route(
+            "/api/v1/sandbox/stock/opname",
+            post(handlers::sandbox::simulate_stock_opname),
+        )
+        .route(
+            "/api/v1/sandbox/finance/settle",
+            post(handlers::sandbox::simulate_invoice_settlement),
+        )
+        .route(
+            "/api/v1/sandbox/reset",
+            post(handlers::sandbox::reset_sandbox),
+        )
         .layer(cors)
         .layer(TraceLayer::new_for_http())
         .with_state(state)
