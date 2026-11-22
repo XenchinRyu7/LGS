@@ -18,14 +18,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let state = AppState::new();
-    let app = api::create_router(state);
-
+    let mut db_pool = None;
     if let Ok(db_url) = std::env::var("DATABASE_URL") {
         if !db_url.trim().is_empty() {
-            info!("📦 Database configuration loaded from environment");
+            info!("📦 Initializing PostgreSQL database connection pool...");
+            db_pool = enterprise_logistics_backend::db::init_db_pool(&db_url).await;
         }
     }
+
+    let state = AppState::with_db(db_pool);
+    let app = api::create_router(state);
+
     if let Ok(redis_url) = std::env::var("REDIS_URL") {
         if !redis_url.trim().is_empty() {
             info!("⚡ Redis configuration loaded from environment");

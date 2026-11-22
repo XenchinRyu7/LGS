@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { LogisticsApi } from '../../lib/api';
 import type { TrackingView } from '../../types/logistics';
+import { TrackingMap } from './TrackingMap';
 
 export function TrackingConsole() {
   const [trackingNumber, setTrackingNumber] = useState('TRK-ALPHA01');
@@ -97,7 +98,11 @@ export function TrackingConsole() {
       )}
 
       {trackingData && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <>
+          {/* OpenStreetMap Live GPS Telemetry View */}
+          <TrackingMap trackingData={trackingData} />
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Tracking Timeline */}
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-6 lg:col-span-2">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border gap-2">
@@ -209,6 +214,7 @@ export function TrackingConsole() {
             </div>
           </div>
         </div>
+        </>
       )}
     </div>
   );

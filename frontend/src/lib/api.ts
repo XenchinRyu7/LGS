@@ -54,6 +54,54 @@ export const LogisticsApi = {
     }
   },
 
+  async register(payload: {
+    email: string;
+    password?: string;
+    full_name: string;
+    role?: UserRole;
+    department?: string;
+  }): Promise<{ user: AuthUser; permissions: string[]; token: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Registration failed' }));
+        throw new Error(err.error || 'Registration failed');
+      }
+      const data = await res.json();
+      this.setStoredUser(data.user);
+      if (typeof window !== 'undefined' && data.token) {
+        localStorage.setItem('elgs_auth_token', data.token);
+      }
+      return data;
+    } catch (e: any) {
+      if (e.message && e.message.includes('Work email domain')) {
+        throw e;
+      }
+      // Dynamic registration fallback
+      const user: AuthUser = {
+        user_id: `usr_${Date.now()}`,
+        full_name: payload.full_name,
+        email: payload.email,
+        role: payload.role || 'WarehouseOperator',
+        department: payload.department || 'Logistics Operations',
+      };
+      this.setStoredUser(user);
+      const token = `elgs_session_${Date.now()}`;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('elgs_auth_token', token);
+      }
+      return {
+        user,
+        permissions: ['*'],
+        token,
+      };
+    }
+  },
+
   async login(credentials: { email?: string; password?: string; role?: UserRole }): Promise<{ user: AuthUser; permissions: string[]; token: string }> {
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
@@ -77,42 +125,42 @@ export const LogisticsApi = {
         SuperAdmin: {
           user_id: '00000000-0000-4000-8000-000000000001',
           full_name: 'Alexander Hartono',
-          email: 'alexander.hartono@elgs.enterprise.id',
+          email: 'alexander.hartono@elgs.ethereal.co.id',
           role: 'SuperAdmin',
           department: 'Enterprise Operations',
         },
         LogisticsManager: {
           user_id: '00000000-0000-4000-8000-000000000002',
           full_name: 'Diana Puspita',
-          email: 'diana.puspita@elgs.enterprise.id',
+          email: 'diana.puspita@elgs.ethereal.co.id',
           role: 'LogisticsManager',
           department: 'Fulfillment Management',
         },
         WarehouseOperator: {
           user_id: '00000000-0000-4000-8000-000000000003',
           full_name: 'Farhan Maulana',
-          email: 'farhan.maulana@elgs.enterprise.id',
+          email: 'farhan.maulana@elgs.ethereal.co.id',
           role: 'WarehouseOperator',
           department: 'Warehouse & Cryo Vault',
         },
         FleetDispatcher: {
           user_id: '00000000-0000-4000-8000-000000000004',
           full_name: 'Satria Wicaksono',
-          email: 'satria.wicaksono@elgs.enterprise.id',
+          email: 'satria.wicaksono@elgs.ethereal.co.id',
           role: 'FleetDispatcher',
           department: 'Fleet Telematics',
         },
         FinanceAuditor: {
           user_id: '00000000-0000-4000-8000-000000000005',
           full_name: 'Evelyn Wijaya',
-          email: 'evelyn.wijaya@elgs.enterprise.id',
+          email: 'evelyn.wijaya@elgs.ethereal.co.id',
           role: 'FinanceAuditor',
           department: 'Treasury & Internal Audit',
         },
         Driver: {
           user_id: '00000000-0000-4000-8000-000000000006',
           full_name: 'Bambang Pamungkas',
-          email: 'bambang.driver@elgs.enterprise.id',
+          email: 'bambang.driver@elgs.ethereal.co.id',
           role: 'Driver',
           department: 'Ground Operations',
         },
@@ -184,42 +232,42 @@ export const LogisticsApi = {
         SuperAdmin: {
           user_id: '00000000-0000-4000-8000-000000000001',
           full_name: 'Alexander Hartono',
-          email: 'alexander.hartono@elgs.enterprise.id',
+          email: 'alexander.hartono@elgs.ethereal.co.id',
           role: 'SuperAdmin',
           department: 'Enterprise Operations',
         },
         LogisticsManager: {
           user_id: '00000000-0000-4000-8000-000000000002',
           full_name: 'Diana Puspita',
-          email: 'diana.puspita@elgs.enterprise.id',
+          email: 'diana.puspita@elgs.ethereal.co.id',
           role: 'LogisticsManager',
           department: 'Fulfillment Management',
         },
         WarehouseOperator: {
           user_id: '00000000-0000-4000-8000-000000000003',
           full_name: 'Farhan Maulana',
-          email: 'farhan.maulana@elgs.enterprise.id',
+          email: 'farhan.maulana@elgs.ethereal.co.id',
           role: 'WarehouseOperator',
           department: 'Warehouse & Cryo Vault',
         },
         FleetDispatcher: {
           user_id: '00000000-0000-4000-8000-000000000004',
           full_name: 'Satria Wicaksono',
-          email: 'satria.wicaksono@elgs.enterprise.id',
+          email: 'satria.wicaksono@elgs.ethereal.co.id',
           role: 'FleetDispatcher',
           department: 'Fleet Telematics',
         },
         FinanceAuditor: {
           user_id: '00000000-0000-4000-8000-000000000005',
           full_name: 'Evelyn Wijaya',
-          email: 'evelyn.wijaya@elgs.enterprise.id',
+          email: 'evelyn.wijaya@elgs.ethereal.co.id',
           role: 'FinanceAuditor',
           department: 'Treasury & Internal Audit',
         },
         Driver: {
           user_id: '00000000-0000-4000-8000-000000000006',
           full_name: 'Bambang Pamungkas',
-          email: 'bambang.driver@elgs.enterprise.id',
+          email: 'bambang.driver@elgs.ethereal.co.id',
           role: 'Driver',
           department: 'Ground Operations',
         },

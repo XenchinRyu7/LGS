@@ -19,6 +19,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/v1/health", get(handlers::health_check))
         // IAM, RBAC & SOC-2 Audit Trail
         .route("/api/v1/auth/login", post(handlers::auth::login))
+        .route("/api/v1/auth/register", post(handlers::auth::register))
         .route("/api/v1/auth/logout", post(handlers::auth::logout))
         .route("/api/v1/auth/me", get(handlers::auth::get_current_user))
         .route(

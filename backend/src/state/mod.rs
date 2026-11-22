@@ -18,6 +18,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct AppStateInner {
+    pub db: Option<sqlx::PgPool>,
     pub users: Vec<AuthUser>,
     pub current_user: AuthUser,
     pub audit_logs: Vec<AuditRecord>,
@@ -48,6 +49,10 @@ impl Default for AppState {
 
 impl AppState {
     pub fn new() -> Self {
+        Self::with_db(None)
+    }
+
+    pub fn with_db(db: Option<sqlx::PgPool>) -> Self {
         let now = Utc::now();
 
         // 1. RBAC Users Roster
@@ -61,35 +66,35 @@ impl AppState {
             AuthUser {
                 user_id: admin_id,
                 full_name: "Alexander Hartono (Super Admin)".to_string(),
-                email: "alexander.hartono@elgs.enterprise.id".to_string(),
+                email: "alexander.hartono@elgs.ethereal.co.id".to_string(),
                 role: UserRole::SuperAdmin,
                 department: "Enterprise Operations".to_string(),
             },
             AuthUser {
                 user_id: manager_id,
                 full_name: "Diana Puspita (Logistics Manager)".to_string(),
-                email: "diana.puspita@elgs.enterprise.id".to_string(),
+                email: "diana.puspita@elgs.ethereal.co.id".to_string(),
                 role: UserRole::LogisticsManager,
                 department: "Fulfillment Management".to_string(),
             },
             AuthUser {
                 user_id: operator_id,
                 full_name: "Farhan Maulana (Warehouse Lead)".to_string(),
-                email: "farhan.maulana@elgs.enterprise.id".to_string(),
+                email: "farhan.maulana@elgs.ethereal.co.id".to_string(),
                 role: UserRole::WarehouseOperator,
                 department: "Warehouse & Cryo Vault".to_string(),
             },
             AuthUser {
                 user_id: dispatcher_id,
                 full_name: "Satria Wicaksono (Fleet Dispatcher)".to_string(),
-                email: "satria.wicaksono@elgs.enterprise.id".to_string(),
+                email: "satria.wicaksono@elgs.ethereal.co.id".to_string(),
                 role: UserRole::FleetDispatcher,
                 department: "Fleet Telematics".to_string(),
             },
             AuthUser {
                 user_id: auditor_id,
                 full_name: "Evelyn Wijaya (Finance Auditor)".to_string(),
-                email: "evelyn.wijaya@elgs.enterprise.id".to_string(),
+                email: "evelyn.wijaya@elgs.ethereal.co.id".to_string(),
                 role: UserRole::FinanceAuditor,
                 department: "Treasury & Internal Audit".to_string(),
             },
@@ -418,6 +423,7 @@ impl AppState {
 
         Self {
             inner: Arc::new(RwLock::new(AppStateInner {
+                db,
                 users,
                 current_user,
                 audit_logs,

@@ -16,6 +16,110 @@ pub struct LoginPayload {
     pub role: Option<UserRole>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct RegisterPayload {
+    pub email: String,
+    pub password: Option<String>,
+    pub full_name: String,
+    pub role: Option<UserRole>,
+    pub department: Option<String>,
+}
+
+pub async fn register(
+    State(state): State<AppState>,
+    Json(payload): Json<RegisterPayload>,
+) -> impl IntoResponse {
+    let clean_email = payload.email.trim().to_lowercase();
+    let domain = "@elgs.ethereal.co.id";
+
+    // Strictly validate email domain
+    if !clean_email.ends_with(domain) {
+        return (
+            axum::http::StatusCode::BAD_REQUEST,
+            Json(json!({
+                "error": format!("Work email domain must strictly be {}", domain)
+            })),
+        );
+    }
+
+    if payload.full_name.trim().is_empty() {
+        return (
+            axum::http::StatusCode::BAD_REQUEST,
+            Json(json!({
+                "error": "Full name is required"
+            })),
+        );
+    }
+
+    let mut write = state.inner.write();
+
+    // Check if user already exists in memory
+    if write
+        .users
+        .iter()
+        .any(|u| u.email.to_lowercase() == clean_email)
+    {
+        return (
+            axum::http::StatusCode::CONFLICT,
+            Json(json!({
+                "error": "User with this email already exists"
+            })),
+        );
+    }
+
+    let role = payload.role.unwrap_or(UserRole::WarehouseOperator);
+    let department = payload
+        .department
+        .unwrap_or_else(|| "Logistics Operations".to_string());
+    let new_user = crate::domain::rbac::AuthUser {
+        user_id: uuid::Uuid::new_v4(),
+        full_name: payload.full_name.trim().to_string(),
+        email: clean_email.clone(),
+        role: role.clone(),
+        department,
+    };
+
+    // If PostgreSQL pool is available, persist user
+    if let Some(ref pool) = write.db {
+        let pool = pool.clone();
+        let user_id = new_user.user_id;
+        let email = new_user.email.clone();
+        let name = new_user.full_name.clone();
+        let role_str = new_user.role.as_str().to_string();
+        let dept = new_user.department.clone();
+
+        tokio::spawn(async move {
+            let _ = sqlx::query(
+                r#"INSERT INTO elgs_users (user_id, email, full_name, role_id, department)
+                   VALUES ($1, $2, $3, $4, $5)
+                   ON CONFLICT (email) DO UPDATE SET full_name = EXCLUDED.full_name"#,
+            )
+            .bind(user_id)
+            .bind(email)
+            .bind(name)
+            .bind(role_str)
+            .bind(dept)
+            .execute(&pool)
+            .await;
+        });
+    }
+
+    write.users.push(new_user.clone());
+    write.current_user = new_user.clone();
+
+    let perms: Vec<_> = new_user.role.permissions().into_iter().collect();
+
+    (
+        axum::http::StatusCode::CREATED,
+        Json(json!({
+            "token": format!("elgs_session_{}", uuid::Uuid::new_v4()),
+            "user": new_user,
+            "permissions": perms,
+            "message": "User registered and authenticated successfully"
+        })),
+    )
+}
+
 pub async fn login(
     State(state): State<AppState>,
     Json(payload): Json<LoginPayload>,

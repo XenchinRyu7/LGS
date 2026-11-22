@@ -94,7 +94,7 @@ async fn test_api_auth_login_and_logout() {
 
     // 1. Valid Login
     let payload = serde_json::json!({
-        "email": "diana.puspita@elgs.enterprise.id"
+        "email": "diana.puspita@elgs.ethereal.co.id"
     });
     let response = app
         .clone()
@@ -115,7 +115,57 @@ async fn test_api_auth_login_and_logout() {
     assert_eq!(json["user"]["role"], "LogisticsManager");
     assert!(json["token"].is_string());
 
-    // 2. Logout
+    // 2. Dynamic Register
+    let reg_payload = serde_json::json!({
+        "full_name": "Reza Rahadian",
+        "email": "reza.rahadian@elgs.ethereal.co.id",
+        "role": "FleetDispatcher",
+        "department": "Transport Logistics"
+    });
+    let reg_resp = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/auth/register")
+                .header("content-type", "application/json")
+                .body(Body::from(serde_json::to_vec(&reg_payload).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(reg_resp.status(), StatusCode::CREATED);
+    let reg_body = reg_resp.into_body().collect().await.unwrap().to_bytes();
+    let reg_json: serde_json::Value = serde_json::from_slice(&reg_body).unwrap();
+    assert_eq!(
+        reg_json["user"]["email"],
+        "reza.rahadian@elgs.ethereal.co.id"
+    );
+    assert_eq!(reg_json["user"]["role"], "FleetDispatcher");
+
+    // 3. Domain validation rejection
+    let invalid_domain_payload = serde_json::json!({
+        "full_name": "Hacker Imposter",
+        "email": "hacker@gmail.com",
+        "role": "SuperAdmin"
+    });
+    let reject_resp = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/auth/register")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    serde_json::to_vec(&invalid_domain_payload).unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(reject_resp.status(), StatusCode::BAD_REQUEST);
+
+    // 4. Logout
     let logout_resp = app
         .oneshot(
             Request::builder()
