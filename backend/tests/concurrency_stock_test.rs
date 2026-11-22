@@ -6,7 +6,7 @@ use enterprise_logistics_backend::{
 
 #[tokio::test]
 async fn test_concurrent_stock_reservation_integrity() {
-    let state = AppState::new();
+    let state = AppState::new().with_test_users();
     let admin = state.inner.read().users[0].clone();
 
     let handles: Vec<_> = (0..5)

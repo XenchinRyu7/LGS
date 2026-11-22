@@ -89,7 +89,7 @@ async fn test_api_tracking_query() {
 
 #[tokio::test]
 async fn test_api_auth_login_and_logout() {
-    let state = AppState::new();
+    let state = AppState::new().with_test_users();
     let app = create_router(state);
 
     // 1. Valid Login

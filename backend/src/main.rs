@@ -26,7 +26,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let state = AppState::with_db(db_pool);
+    let state = AppState::with_db(db_pool.clone());
+    if let Some(ref pool) = db_pool {
+        if let Ok(count) = enterprise_logistics_backend::db::sync_users_from_db(pool, &state).await
+        {
+            info!(
+                "👥 Synchronized {} corporate user accounts from PostgreSQL into active engine",
+                count
+            );
+        }
+    }
     let app = api::create_router(state);
 
     if let Ok(redis_url) = std::env::var("REDIS_URL") {

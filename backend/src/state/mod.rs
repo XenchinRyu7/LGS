@@ -55,68 +55,9 @@ impl AppState {
     pub fn with_db(db: Option<sqlx::PgPool>) -> Self {
         let now = Utc::now();
 
-        // 1. RBAC Users Roster
-        let admin_id = Uuid::parse_str("00000000-0000-4000-8000-000000000001").unwrap();
-        let manager_id = Uuid::parse_str("00000000-0000-4000-8000-000000000002").unwrap();
-        let operator_id = Uuid::parse_str("00000000-0000-4000-8000-000000000003").unwrap();
-        let dispatcher_id = Uuid::parse_str("00000000-0000-4000-8000-000000000004").unwrap();
-        let auditor_id = Uuid::parse_str("00000000-0000-4000-8000-000000000005").unwrap();
-        let pm_id = Uuid::parse_str("00000000-0000-4000-8000-000000000006").unwrap();
-        let driver_id = Uuid::parse_str("00000000-0000-4000-8000-000000000007").unwrap();
-
-        let users = vec![
-            AuthUser {
-                user_id: admin_id,
-                full_name: "Alexander Hartono (Super Admin)".to_string(),
-                email: "alexander.hartono@elgs.ethereal.co.id".to_string(),
-                role: UserRole::SuperAdmin,
-                department: "Enterprise Operations".to_string(),
-            },
-            AuthUser {
-                user_id: pm_id,
-                full_name: "Hendra Wijaya (Project Manager)".to_string(),
-                email: "hendra.wijaya@elgs.ethereal.co.id".to_string(),
-                role: UserRole::ProjectManager,
-                department: "Supply Chain Solutions & Project Management".to_string(),
-            },
-            AuthUser {
-                user_id: manager_id,
-                full_name: "Diana Puspita (Logistics Manager)".to_string(),
-                email: "diana.puspita@elgs.ethereal.co.id".to_string(),
-                role: UserRole::LogisticsManager,
-                department: "Fulfillment Management".to_string(),
-            },
-            AuthUser {
-                user_id: operator_id,
-                full_name: "Farhan Maulana (Warehouse Lead)".to_string(),
-                email: "farhan.maulana@elgs.ethereal.co.id".to_string(),
-                role: UserRole::WarehouseOperator,
-                department: "Warehouse & Cryo Vault".to_string(),
-            },
-            AuthUser {
-                user_id: dispatcher_id,
-                full_name: "Satria Wicaksono (Fleet Dispatcher)".to_string(),
-                email: "satria.wicaksono@elgs.ethereal.co.id".to_string(),
-                role: UserRole::FleetDispatcher,
-                department: "Fleet Telematics".to_string(),
-            },
-            AuthUser {
-                user_id: auditor_id,
-                full_name: "Evelyn Wijaya (Finance Auditor)".to_string(),
-                email: "evelyn.wijaya@elgs.ethereal.co.id".to_string(),
-                role: UserRole::FinanceAuditor,
-                department: "Treasury & Internal Audit".to_string(),
-            },
-            AuthUser {
-                user_id: driver_id,
-                full_name: "Bambang Pamungkas (Fleet Driver)".to_string(),
-                email: "bambang.driver@elgs.ethereal.co.id".to_string(),
-                role: UserRole::Driver,
-                department: "Ground Operations".to_string(),
-            },
-        ];
-
-        let current_user = users[0].clone();
+        // 1. RBAC Users Roster — Dynamically synchronized from PostgreSQL elgs_users table
+        let users: Vec<AuthUser> = Vec::new();
+        let current_user = AuthUser::default();
 
         // 2. Warehouses
         let warehouses = vec![
@@ -269,6 +210,10 @@ impl AppState {
         ];
 
         // 6. Orders
+        let sys_admin_id = Uuid::parse_str("00000000-0000-4000-8000-000000000001").unwrap();
+        let sys_manager_id = Uuid::parse_str("00000000-0000-4000-8000-000000000002").unwrap();
+        let sys_auditor_id = Uuid::parse_str("00000000-0000-4000-8000-000000000005").unwrap();
+
         let order_1_id = Uuid::new_v4();
         let order_1 = SalesOrder {
             id: order_1_id,
@@ -300,8 +245,8 @@ impl AppState {
             tracking_number: "TRK-ALPHA01".to_string(),
             total_amount: 52_500_000.0,
             total_weight_kg: 120.0,
-            created_by: Some(manager_id),
-            approved_by: Some(admin_id),
+            created_by: Some(sys_manager_id),
+            approved_by: Some(sys_admin_id),
             notes: Some("Temperature sensitive: Keep between -25C and -15C".to_string()),
             created_at: now - Duration::hours(3),
             updated_at: now - Duration::minutes(20),
@@ -338,7 +283,7 @@ impl AppState {
             tracking_number: "TRK-BETA02".to_string(),
             total_amount: 370_000_000.0,
             total_weight_kg: 130.0,
-            created_by: Some(manager_id),
+            created_by: Some(sys_manager_id),
             approved_by: None,
             notes: Some("Handle with care: fragile server equipment".to_string()),
             created_at: now - Duration::hours(1),
@@ -376,8 +321,8 @@ impl AppState {
             tracking_number: "TRK-GAMMA03".to_string(),
             total_amount: 360_000_000.0,
             total_weight_kg: 180.0,
-            created_by: Some(manager_id),
-            approved_by: Some(admin_id),
+            created_by: Some(sys_manager_id),
+            approved_by: Some(sys_admin_id),
             notes: None,
             created_at: now - Duration::hours(12),
             updated_at: now - Duration::minutes(40),
@@ -386,7 +331,7 @@ impl AppState {
         // 7. Initial SOC-2 Audit Trail
         let audit_logs = vec![
             AuditRecord::new(
-                admin_id,
+                sys_admin_id,
                 "Alexander Hartono".to_string(),
                 "SuperAdmin".to_string(),
                 "SYSTEM_BOOTSTRAP".to_string(),
@@ -397,7 +342,7 @@ impl AppState {
                 "127.0.0.1".to_string(),
             ),
             AuditRecord::new(
-                manager_id,
+                sys_manager_id,
                 "Diana Puspita".to_string(),
                 "LogisticsManager".to_string(),
                 "ORDER_CREATED".to_string(),
@@ -408,7 +353,7 @@ impl AppState {
                 "192.168.1.10".to_string(),
             ),
             AuditRecord::new(
-                admin_id,
+                sys_admin_id,
                 "Alexander Hartono".to_string(),
                 "SuperAdmin".to_string(),
                 "ORDER_APPROVED".to_string(),
@@ -431,7 +376,7 @@ impl AppState {
             tax_amount: 5_775_000.0,
             total_amount: 58_275_000.0,
             status: InvoiceStatus::Issued,
-            created_by: Some(auditor_id),
+            created_by: Some(sys_auditor_id),
             settled_by: None,
             due_date: now + Duration::days(14),
             created_at: now - Duration::hours(2),
@@ -457,6 +402,66 @@ impl AppState {
                 invoices,
             })),
         }
+    }
+
+    pub fn with_test_users(self) -> Self {
+        let mut write = self.inner.write();
+        if write.users.is_empty() {
+            write.users = vec![
+                AuthUser {
+                    user_id: Uuid::parse_str("00000000-0000-4000-8000-000000000001").unwrap(),
+                    full_name: "Alexander Hartono (Super Admin)".to_string(),
+                    email: "alexander.hartono@elgs.ethereal.co.id".to_string(),
+                    role: UserRole::SuperAdmin,
+                    department: "Enterprise Operations".to_string(),
+                },
+                AuthUser {
+                    user_id: Uuid::parse_str("00000000-0000-4000-8000-000000000006").unwrap(),
+                    full_name: "Hendra Wijaya (Project Manager)".to_string(),
+                    email: "hendra.wijaya@elgs.ethereal.co.id".to_string(),
+                    role: UserRole::ProjectManager,
+                    department: "Supply Chain Solutions & Project Management".to_string(),
+                },
+                AuthUser {
+                    user_id: Uuid::parse_str("00000000-0000-4000-8000-000000000002").unwrap(),
+                    full_name: "Diana Puspita (Logistics Manager)".to_string(),
+                    email: "diana.puspita@elgs.ethereal.co.id".to_string(),
+                    role: UserRole::LogisticsManager,
+                    department: "Fulfillment Management".to_string(),
+                },
+                AuthUser {
+                    user_id: Uuid::parse_str("00000000-0000-4000-8000-000000000003").unwrap(),
+                    full_name: "Farhan Maulana (Warehouse Lead)".to_string(),
+                    email: "farhan.maulana@elgs.ethereal.co.id".to_string(),
+                    role: UserRole::WarehouseOperator,
+                    department: "Warehouse & Cryo Vault".to_string(),
+                },
+                AuthUser {
+                    user_id: Uuid::parse_str("00000000-0000-4000-8000-000000000004").unwrap(),
+                    full_name: "Satria Wicaksono (Fleet Dispatcher)".to_string(),
+                    email: "satria.wicaksono@elgs.ethereal.co.id".to_string(),
+                    role: UserRole::FleetDispatcher,
+                    department: "Fleet Telematics".to_string(),
+                },
+                AuthUser {
+                    user_id: Uuid::parse_str("00000000-0000-4000-8000-000000000005").unwrap(),
+                    full_name: "Evelyn Wijaya (Finance Auditor)".to_string(),
+                    email: "evelyn.wijaya@elgs.ethereal.co.id".to_string(),
+                    role: UserRole::FinanceAuditor,
+                    department: "Treasury & Internal Audit".to_string(),
+                },
+                AuthUser {
+                    user_id: Uuid::parse_str("00000000-0000-4000-8000-000000000007").unwrap(),
+                    full_name: "Bambang Pamungkas (Fleet Driver)".to_string(),
+                    email: "bambang.driver@elgs.ethereal.co.id".to_string(),
+                    role: UserRole::Driver,
+                    department: "Ground Operations".to_string(),
+                },
+            ];
+            write.current_user = write.users[1].clone();
+        }
+        drop(write);
+        self
     }
 
     #[allow(clippy::too_many_arguments)]

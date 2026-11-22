@@ -3,6 +3,7 @@ use crate::state::AppState;
 use axum::{extract::State, response::IntoResponse, Json};
 use serde::Deserialize;
 use serde_json::json;
+use sqlx::Row;
 
 #[derive(Debug, Deserialize)]
 pub struct SwitchRolePayload {
@@ -124,25 +125,80 @@ pub async fn login(
     State(state): State<AppState>,
     Json(payload): Json<LoginPayload>,
 ) -> impl IntoResponse {
-    let mut write = state.inner.write();
-    let target_user = if let Some(role) = payload.role {
-        write.users.iter().find(|u| u.role == role).cloned()
-    } else if let Some(ref email) = payload.email {
-        let clean = email.trim().to_lowercase();
-        write
-            .users
-            .iter()
-            .find(|u| {
-                let u_email = u.email.to_lowercase();
-                u_email == clean || u_email.starts_with(&clean)
-            })
-            .cloned()
-    } else {
-        None
-    };
+    let pool_opt = state.inner.read().db.clone();
+    let mut target_user = None;
+
+    if let Some(ref pool) = pool_opt {
+        if let Some(ref email) = payload.email {
+            let clean = email.trim().to_lowercase();
+            if let Ok(Some(row)) = sqlx::query(
+                "SELECT user_id, email, full_name, role_id, department FROM elgs_users WHERE LOWER(email) = LOWER($1) AND is_active = TRUE LIMIT 1",
+            )
+            .bind(&clean)
+            .fetch_optional(pool)
+            .await
+            {
+                let user_id = row.get("user_id");
+                let email: String = row.get("email");
+                let full_name: String = row.get("full_name");
+                let role_str: String = row.get("role_id");
+                let department: String = row.get("department");
+                let role = UserRole::from_str_opt(&role_str).unwrap_or(UserRole::WarehouseOperator);
+                target_user = Some(crate::domain::rbac::AuthUser {
+                    user_id,
+                    full_name,
+                    email,
+                    role,
+                    department,
+                });
+            }
+        } else if let Some(ref role) = payload.role {
+            let role_str = role.as_str();
+            if let Ok(Some(row)) = sqlx::query(
+                "SELECT user_id, email, full_name, role_id, department FROM elgs_users WHERE role_id = $1 AND is_active = TRUE LIMIT 1",
+            )
+            .bind(role_str)
+            .fetch_optional(pool)
+            .await
+            {
+                let user_id = row.get("user_id");
+                let email: String = row.get("email");
+                let full_name: String = row.get("full_name");
+                let role_str: String = row.get("role_id");
+                let department: String = row.get("department");
+                let role = UserRole::from_str_opt(&role_str).unwrap_or(UserRole::WarehouseOperator);
+                target_user = Some(crate::domain::rbac::AuthUser {
+                    user_id,
+                    full_name,
+                    email,
+                    role,
+                    department,
+                });
+            }
+        }
+    }
+
+    if target_user.is_none() {
+        let read = state.inner.read();
+        target_user = if let Some(role) = payload.role {
+            read.users.iter().find(|u| u.role == role).cloned()
+        } else if let Some(ref email) = payload.email {
+            let clean = email.trim().to_lowercase();
+            read.users
+                .iter()
+                .find(|u| {
+                    let u_email = u.email.to_lowercase();
+                    u_email == clean || u_email.starts_with(&clean)
+                })
+                .cloned()
+        } else {
+            None
+        };
+    }
 
     match target_user {
         Some(user) => {
+            let mut write = state.inner.write();
             write.current_user = user.clone();
             let perms: Vec<_> = user.role.permissions().into_iter().collect();
             (

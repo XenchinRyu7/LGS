@@ -14,6 +14,19 @@ pub enum UserRole {
 }
 
 impl UserRole {
+    pub fn from_str_opt(s: &str) -> Option<Self> {
+        match s {
+            "SuperAdmin" => Some(UserRole::SuperAdmin),
+            "ProjectManager" => Some(UserRole::ProjectManager),
+            "LogisticsManager" => Some(UserRole::LogisticsManager),
+            "WarehouseOperator" => Some(UserRole::WarehouseOperator),
+            "FleetDispatcher" => Some(UserRole::FleetDispatcher),
+            "FinanceAuditor" => Some(UserRole::FinanceAuditor),
+            "Driver" => Some(UserRole::Driver),
+            _ => None,
+        }
+    }
+
     pub fn as_str(&self) -> &'static str {
         match self {
             UserRole::SuperAdmin => "SuperAdmin",
@@ -155,5 +168,17 @@ pub struct AuthUser {
 impl AuthUser {
     pub fn has_permission(&self, permission: &Permission) -> bool {
         self.role.permissions().contains(permission)
+    }
+}
+
+impl Default for AuthUser {
+    fn default() -> Self {
+        Self {
+            user_id: Uuid::nil(),
+            full_name: "ELGS System Account".to_string(),
+            email: "system@elgs.ethereal.co.id".to_string(),
+            role: UserRole::SuperAdmin,
+            department: "Enterprise Operations".to_string(),
+        }
     }
 }
