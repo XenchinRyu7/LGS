@@ -42,6 +42,9 @@ pub async fn init_db_pool(database_url: &str) -> Option<PgPool> {
 pub async fn run_migrations(pool: &PgPool) -> Result<(), sqlx::Error> {
     let schema_sql = include_str!("../../migrations/0001_init_elgs_schema.sql");
     sqlx::raw_sql(schema_sql).execute(pool).await?;
+
+    let seed_sql = include_str!("../../migrations/0002_seed_operational_data.sql");
+    sqlx::raw_sql(seed_sql).execute(pool).await?;
     Ok(())
 }
 
