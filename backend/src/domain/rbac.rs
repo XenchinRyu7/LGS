@@ -176,7 +176,7 @@ impl Default for AuthUser {
         Self {
             user_id: Uuid::nil(),
             full_name: "ELGS System Account".to_string(),
-            email: "system@elgs.ethereal.co.id".to_string(),
+            email: "system@internal.engine".to_string(),
             role: UserRole::SuperAdmin,
             department: "Enterprise Operations".to_string(),
         }

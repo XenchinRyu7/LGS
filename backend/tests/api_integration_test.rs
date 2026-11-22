@@ -4,6 +4,9 @@ use enterprise_logistics_backend::{api::create_router, state::AppState};
 use http_body_util::BodyExt;
 use tower::ServiceExt;
 
+#[path = "fixtures.rs"]
+mod fixtures;
+
 #[tokio::test]
 async fn test_api_health_check() {
     let state = AppState::new();
@@ -89,7 +92,7 @@ async fn test_api_tracking_query() {
 
 #[tokio::test]
 async fn test_api_auth_login_and_logout() {
-    let state = AppState::new().with_test_users();
+    let state = fixtures::setup_test_state();
     let app = create_router(state);
 
     // 1. Valid Login

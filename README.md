@@ -39,14 +39,16 @@ ORDER & DISPATCH            WAREHOUSE & STOCK           FLEET TELEMATICS        
 ## 🔐 Enterprise Governance: RBAC, SoD, & SOC-2
 
 ### 1. Role-Based Access Control (RBAC) Matrix
-ELGS features 5 switchable personas in the navbar selector:
-| Persona | Role | Permissions |
-|---|---|---|
-| **Alexander Hartono** | `SuperAdmin` | Full Wildcard access (`*`) — Bypass, configuration, user management |
-| **Diana Permata** | `LogisticsManager` | Create/Cancel orders, approve inventory, submit opname, view finance |
-| **Farhan Maulana** | `WarehouseOperator` | Create opname counts, view orders/inventory, cold-storage telemetry |
-| **Satria Wibowo** | `FleetDispatcher` | Assign routes, view driver status, track fleet telematics |
-| **Evelyn Wijaya** | `FinanceAuditor` | Issue freight invoices, dual-control settle invoices, view audit ledger |
+ELGS manages roles and corporate user accounts dynamically inside PostgreSQL (`elgs_users`):
+| Persona | Role | Department | Permissions |
+|---|---|---|---|
+| **Alexander Hartono** | `SuperAdmin` | Enterprise Operations | Full Wildcard access (`*`) — Security admin, configuration |
+| **Hendra Wijaya** | `ProjectManager` | Supply Chain Solutions | Project oversight, order approvals, fleet and warehouse management |
+| **Diana Puspita** | `LogisticsManager` | Fulfillment Management | Create/Update orders, approve inventory, route dispatch, finance |
+| **Farhan Maulana** | `WarehouseOperator` | Warehouse & Cryo Vault | Bin counts, stock transfers, cold-storage telemetry |
+| **Satria Wicaksono** | `FleetDispatcher` | Fleet Telematics | Assign routes, driver telematics, route dispatch |
+| **Evelyn Wijaya** | `FinanceAuditor` | Treasury & Internal Audit | Freight invoices, dual-control settle, audit trail review |
+| **Bambang Pamungkas** | `Driver` | Ground Operations | Active route navigation, proof of delivery execution |
 
 ### 2. Segregation of Duties (SoD) Enforced Rules
 - **Order Maker-Checker Rule**: The user who created a sales order (`created_by`) is strictly prohibited from approving inventory reservation for that same order, unless authorized as `SuperAdmin`.

@@ -75,9 +75,6 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 <label htmlFor="login-email" className="text-xs font-medium text-foreground">
                   Work Email Address
                 </label>
-                <span className="text-[10px] font-mono text-primary font-semibold">
-                  @elgs.ethereal.co.id
-                </span>
               </div>
               <div className="relative">
                 <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -158,10 +155,6 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
           </form>
         </div>
 
-        <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-          <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-          <span>Role-Based Access Control &bull; Internal Enterprise Portal</span>
-        </div>
       </div>
     </div>
   );

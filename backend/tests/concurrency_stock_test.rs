@@ -1,12 +1,14 @@
 use enterprise_logistics_backend::{
     domain::order::{Address, OrderItem, ServiceTier},
     services::order_service::{CreateOrderPayload, OrderService},
-    state::AppState,
 };
+
+#[path = "fixtures.rs"]
+mod fixtures;
 
 #[tokio::test]
 async fn test_concurrent_stock_reservation_integrity() {
-    let state = AppState::new().with_test_users();
+    let state = fixtures::setup_test_state();
     let admin = state.inner.read().users[0].clone();
 
     let handles: Vec<_> = (0..5)

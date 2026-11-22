@@ -7,12 +7,14 @@ use enterprise_logistics_backend::{
         order_service::{CreateOrderPayload, OrderService},
         warehouse_service::{StockOpnamePayload, WarehouseService},
     },
-    state::AppState,
 };
+
+#[path = "fixtures.rs"]
+mod fixtures;
 
 #[test]
 fn test_sod_order_maker_checker_rule_enforced() {
-    let state = AppState::new().with_test_users();
+    let state = fixtures::setup_test_state();
 
     // 1. LogisticsManager Diana creates an order
     let manager = state
@@ -83,7 +85,7 @@ fn test_sod_order_maker_checker_rule_enforced() {
 
 #[test]
 fn test_sod_opname_self_approval_blocked() {
-    let state = AppState::new().with_test_users();
+    let state = fixtures::setup_test_state();
 
     // 1. LogisticsManager Diana logs physical stock count (Manager has both submit and approve perms)
     let manager = state
@@ -133,7 +135,7 @@ fn test_sod_opname_self_approval_blocked() {
 
 #[test]
 fn test_soc2_audit_trail_immutable_logging() {
-    let state = AppState::new().with_test_users();
+    let state = fixtures::setup_test_state();
 
     let initial_count = state.inner.read().audit_logs.len();
     assert!(initial_count > 0, "Initial bootstrap audit logs must exist");
