@@ -19,7 +19,10 @@ import type {
   VehicleType,
 } from '../types/logistics';
 
-const API_BASE = 'http://localhost:8080/api/v1';
+const API_BASE =
+  typeof import.meta !== 'undefined' && import.meta.env?.PUBLIC_API_URL
+    ? import.meta.env.PUBLIC_API_URL
+    : 'http://localhost:8080/api/v1';
 
 export const LogisticsApi = {
   async getHealth(): Promise<{ status: string; service: string }> {
