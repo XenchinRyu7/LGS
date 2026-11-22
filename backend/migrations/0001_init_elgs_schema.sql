@@ -192,3 +192,26 @@ CREATE TABLE IF NOT EXISTS elgs_invoices (
     due_date TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- ==============================================================================
+-- Initial Corporate Roles & Enterprise Seeds
+-- ==============================================================================
+INSERT INTO elgs_roles (role_id, name, description) VALUES
+    ('SuperAdmin', 'Super Admin', 'Full enterprise-wide system governance and security administration'),
+    ('ProjectManager', 'Project Manager', 'End-to-end supply chain logistics solutions and delivery management'),
+    ('LogisticsManager', 'Logistics Manager', 'Order fulfillment, inventory allocation and hub management'),
+    ('WarehouseOperator', 'Warehouse Operator', 'Cold storage vault operations and stock counts'),
+    ('FleetDispatcher', 'Fleet Dispatcher', 'Carrier telematics, routing and driver dispatching'),
+    ('FinanceAuditor', 'Finance Auditor', 'Ledger compliance, invoice reconciliation and tariff auditing'),
+    ('Driver', 'Fleet Driver', 'Ground delivery execution and proof of delivery')
+ON CONFLICT (role_id) DO NOTHING;
+
+INSERT INTO elgs_users (user_id, email, full_name, role_id, department) VALUES
+    ('00000000-0000-4000-8000-000000000001', 'alexander.hartono@elgs.ethereal.co.id', 'Alexander Hartono', 'SuperAdmin', 'Enterprise Operations'),
+    ('00000000-0000-4000-8000-000000000006', 'hendra.wijaya@elgs.ethereal.co.id', 'Hendra Wijaya', 'ProjectManager', 'Supply Chain Solutions & Project Management'),
+    ('00000000-0000-4000-8000-000000000002', 'diana.puspita@elgs.ethereal.co.id', 'Diana Puspita', 'LogisticsManager', 'Fulfillment Management'),
+    ('00000000-0000-4000-8000-000000000003', 'farhan.maulana@elgs.ethereal.co.id', 'Farhan Maulana', 'WarehouseOperator', 'Warehouse & Cryo Vault'),
+    ('00000000-0000-4000-8000-000000000004', 'satria.wicaksono@elgs.ethereal.co.id', 'Satria Wicaksono', 'FleetDispatcher', 'Fleet Telematics'),
+    ('00000000-0000-4000-8000-000000000005', 'evelyn.wijaya@elgs.ethereal.co.id', 'Evelyn Wijaya', 'FinanceAuditor', 'Treasury & Internal Audit'),
+    ('00000000-0000-4000-8000-000000000007', 'bambang.driver@elgs.ethereal.co.id', 'Bambang Pamungkas', 'Driver', 'Ground Operations')
+ON CONFLICT (email) DO NOTHING;

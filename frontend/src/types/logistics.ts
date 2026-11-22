@@ -1,5 +1,6 @@
 export type UserRole =
   | 'SuperAdmin'
+  | 'ProjectManager'
   | 'LogisticsManager'
   | 'WarehouseOperator'
   | 'FleetDispatcher'

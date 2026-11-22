@@ -94,7 +94,7 @@ async fn test_api_auth_login_and_logout() {
 
     // 1. Valid Login
     let payload = serde_json::json!({
-        "email": "diana.puspita@elgs.ethereal.co.id"
+        "email": "hendra.wijaya@elgs.ethereal.co.id"
     });
     let response = app
         .clone()
@@ -112,7 +112,8 @@ async fn test_api_auth_login_and_logout() {
     assert_eq!(response.status(), StatusCode::OK);
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    assert_eq!(json["user"]["role"], "LogisticsManager");
+    assert_eq!(json["user"]["role"], "ProjectManager");
+    assert_eq!(json["user"]["email"], "hendra.wijaya@elgs.ethereal.co.id");
     assert!(json["token"].is_string());
 
     // 2. Dynamic Register

@@ -5,6 +5,7 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum UserRole {
     SuperAdmin,
+    ProjectManager,
     LogisticsManager,
     WarehouseOperator,
     FleetDispatcher,
@@ -16,6 +17,7 @@ impl UserRole {
     pub fn as_str(&self) -> &'static str {
         match self {
             UserRole::SuperAdmin => "SuperAdmin",
+            UserRole::ProjectManager => "ProjectManager",
             UserRole::LogisticsManager => "LogisticsManager",
             UserRole::WarehouseOperator => "WarehouseOperator",
             UserRole::FleetDispatcher => "FleetDispatcher",
@@ -51,6 +53,23 @@ impl UserRole {
                     InvoiceSettle,
                     AuditTrailRead,
                     SecurityAdmin,
+                ]);
+            }
+            UserRole::ProjectManager => {
+                perms.extend([
+                    OrderRead,
+                    OrderCreate,
+                    OrderUpdate,
+                    OrderApprove,
+                    OrderReserve,
+                    OrderTransition,
+                    WarehouseRead,
+                    WarehouseManage,
+                    FleetRead,
+                    FleetManage,
+                    RouteDispatch,
+                    FinanceRead,
+                    AuditTrailRead,
                 ]);
             }
             UserRole::LogisticsManager => {

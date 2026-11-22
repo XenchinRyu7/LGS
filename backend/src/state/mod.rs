@@ -61,6 +61,8 @@ impl AppState {
         let operator_id = Uuid::parse_str("00000000-0000-4000-8000-000000000003").unwrap();
         let dispatcher_id = Uuid::parse_str("00000000-0000-4000-8000-000000000004").unwrap();
         let auditor_id = Uuid::parse_str("00000000-0000-4000-8000-000000000005").unwrap();
+        let pm_id = Uuid::parse_str("00000000-0000-4000-8000-000000000006").unwrap();
+        let driver_id = Uuid::parse_str("00000000-0000-4000-8000-000000000007").unwrap();
 
         let users = vec![
             AuthUser {
@@ -69,6 +71,13 @@ impl AppState {
                 email: "alexander.hartono@elgs.ethereal.co.id".to_string(),
                 role: UserRole::SuperAdmin,
                 department: "Enterprise Operations".to_string(),
+            },
+            AuthUser {
+                user_id: pm_id,
+                full_name: "Hendra Wijaya (Project Manager)".to_string(),
+                email: "hendra.wijaya@elgs.ethereal.co.id".to_string(),
+                role: UserRole::ProjectManager,
+                department: "Supply Chain Solutions & Project Management".to_string(),
             },
             AuthUser {
                 user_id: manager_id,
@@ -97,6 +106,13 @@ impl AppState {
                 email: "evelyn.wijaya@elgs.ethereal.co.id".to_string(),
                 role: UserRole::FinanceAuditor,
                 department: "Treasury & Internal Audit".to_string(),
+            },
+            AuthUser {
+                user_id: driver_id,
+                full_name: "Bambang Pamungkas (Fleet Driver)".to_string(),
+                email: "bambang.driver@elgs.ethereal.co.id".to_string(),
+                role: UserRole::Driver,
+                department: "Ground Operations".to_string(),
             },
         ];
 
