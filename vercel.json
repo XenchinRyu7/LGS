@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd frontend && pnpm build && cp -r frontend/.vercel ./",
+  "buildCommand": "cd frontend && pnpm build && cp -r .vercel ../",
   "outputDirectory": ".vercel/output",
   "installCommand": "pnpm install --no-frozen-lockfile && cd frontend && pnpm install",
   "headers": [
