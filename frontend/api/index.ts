@@ -912,20 +912,41 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     // 10. Finance & Invoices
     if (pathname === '/finance/calculate-rate' && method === 'POST') {
       const body = await parseBody(req);
-      const weight = Number(body.weight_kg) || 1.0;
-      const isColdChain = body.service_tier === 'ColdChainExpress';
-      const baseTariff = 50000;
-      const weightTariff = weight * 12500;
-      const coldChainSurcharge = isColdChain ? 150000 : 0;
-      const subtotal = baseTariff + weightTariff + coldChainSurcharge;
-      const ppn11 = subtotal * 0.11;
+      const actualWeight = Number(body.actual_weight_kg || body.weight_kg) || 1.0;
+      const length = Number(body.length_cm) || 40;
+      const width = Number(body.width_cm) || 30;
+      const height = Number(body.height_cm) || 25;
+      const originCity = body.origin_city || 'Jakarta';
+      const destinationCity = body.destination_city || 'Surabaya';
+      const requiresColdChain = Boolean(body.requires_cold_chain || body.service_tier === 'ColdChainExpress');
+      const isExpress = Boolean(body.is_express);
+
+      const volumetric = (length * width * height) / 5000;
+      const chargeable = Math.max(actualWeight, volumetric, 1.0);
+      let distanceFactor = 35000;
+      if (originCity === destinationCity) distanceFactor = 15000;
+      else if ((originCity === 'Jakarta' && destinationCity === 'Bandung') || (originCity === 'Bandung' && destinationCity === 'Jakarta')) distanceFactor = 25000;
+      else if ((originCity === 'Jakarta' && destinationCity === 'Surabaya') || (originCity === 'Surabaya' && destinationCity === 'Jakarta')) distanceFactor = 45000;
+
+      const baseRate = Math.round(chargeable * distanceFactor);
+      const fuelSurcharge = Math.round(baseRate * 0.05);
+      const coldChainSurcharge = requiresColdChain ? Math.round(baseRate * 0.35) : 0;
+      const expressMultiplier = isExpress ? 1.5 : 1.0;
+      const totalShippingCost = Math.round((baseRate + fuelSurcharge + coldChainSurcharge) * expressMultiplier);
+      const estimatedTransitDays = isExpress || originCity === destinationCity ? 1 : 2;
+
       return sendJson(res, 200, {
-        base_tariff: baseTariff,
-        weight_tariff: weightTariff,
+        volumetric_weight_kg: Math.round(volumetric * 100) / 100,
+        chargeable_weight_kg: Math.round(chargeable * 100) / 100,
+        base_rate: baseRate,
+        base_tariff: baseRate,
+        fuel_surcharge: fuelSurcharge,
         cold_chain_surcharge: coldChainSurcharge,
-        subtotal,
-        ppn_tax: ppn11,
-        total_estimate: subtotal + ppn11,
+        express_multiplier: expressMultiplier,
+        total_shipping_cost: totalShippingCost,
+        total_estimate: totalShippingCost,
+        subtotal: baseRate + fuelSurcharge + coldChainSurcharge,
+        estimated_transit_days: estimatedTransitDays,
       });
     }
 

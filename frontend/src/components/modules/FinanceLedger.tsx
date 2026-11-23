@@ -277,32 +277,32 @@ export function FinanceLedger() {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Volumetric Weight:</span>
                 <span className="font-mono font-medium text-foreground">
-                  {quote.volumetric_weight_kg} kg
+                  {quote.volumetric_weight_kg ?? 0} kg
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Chargeable Weight:</span>
                 <span className="font-mono font-bold text-primary">
-                  {quote.chargeable_weight_kg} kg
+                  {quote.chargeable_weight_kg ?? 0} kg
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Base Freight Rate:</span>
                 <span className="font-mono text-foreground">
-                  Rp {quote.base_rate.toLocaleString()}
+                  Rp {(quote.base_rate ?? 0).toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Fuel Index Surcharge:</span>
                 <span className="font-mono text-foreground">
-                  Rp {quote.fuel_surcharge.toLocaleString()}
+                  Rp {(quote.fuel_surcharge ?? 0).toLocaleString()}
                 </span>
               </div>
-              {quote.cold_chain_surcharge > 0 && (
+              {(quote.cold_chain_surcharge ?? 0) > 0 && (
                 <div className="flex justify-between text-cyan-400">
                   <span>Cryo Cold Vault Fee:</span>
                   <span className="font-mono">
-                    Rp {quote.cold_chain_surcharge.toLocaleString()}
+                    Rp {(quote.cold_chain_surcharge ?? 0).toLocaleString()}
                   </span>
                 </div>
               )}
@@ -311,7 +311,7 @@ export function FinanceLedger() {
             <div className="pt-3 border-t border-border">
               <span className="text-[10px] text-muted-foreground">Total Quoted Freight Cost</span>
               <p className="text-2xl font-black text-foreground mt-0.5">
-                Rp {quote.total_shipping_cost.toLocaleString()}
+                Rp {(quote.total_shipping_cost ?? 0).toLocaleString()}
               </p>
             </div>
           </div>
@@ -361,13 +361,13 @@ export function FinanceLedger() {
                     {inv.customer_name}
                   </td>
                   <td className="py-3.5 px-4 font-mono text-muted-foreground">
-                    Rp {inv.subtotal.toLocaleString()}
+                    Rp {(inv.subtotal ?? 0).toLocaleString()}
                   </td>
                   <td className="py-3.5 px-4 font-mono text-muted-foreground">
-                    Rp {inv.tax_amount.toLocaleString()}
+                    Rp {(inv.tax_amount ?? 0).toLocaleString()}
                   </td>
                   <td className="py-3.5 px-4 font-mono font-bold text-foreground">
-                    Rp {inv.total_amount.toLocaleString()}
+                    Rp {(inv.total_amount ?? 0).toLocaleString()}
                   </td>
                   <td className="py-3.5 px-4">
                     <span

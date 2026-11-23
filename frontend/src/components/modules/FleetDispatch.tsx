@@ -184,7 +184,7 @@ export function FleetDispatch() {
                   </div>
                   <div className="flex items-center gap-1.5 text-muted-foreground justify-end">
                     <Gauge className="h-3.5 w-3.5 text-primary" />
-                    <span className="font-mono text-foreground">{v.odometer_km.toLocaleString()} km</span>
+                    <span className="font-mono text-foreground">{(v.odometer_km ?? 0).toLocaleString()} km</span>
                   </div>
                 </div>
               </div>

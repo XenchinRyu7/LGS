@@ -810,7 +810,25 @@ export const LogisticsApi = {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('Failed to calculate rate');
-      return await res.json();
+      const data = await res.json();
+      const volumetric = Number(data.volumetric_weight_kg ?? ((payload.length_cm * payload.width_cm * payload.height_cm) / 5000));
+      const chargeable = Number(data.chargeable_weight_kg ?? Math.max(payload.actual_weight_kg, volumetric, 1));
+      const base = Number(data.base_rate ?? data.base_tariff ?? 0);
+      const fuel = Number(data.fuel_surcharge ?? 0);
+      const cold = Number(data.cold_chain_surcharge ?? 0);
+      const multiplier = Number(data.express_multiplier ?? (payload.is_express ? 1.5 : 1.0));
+      const total = Number(data.total_shipping_cost ?? data.total_estimate ?? (base + fuel + cold) * multiplier);
+
+      return {
+        volumetric_weight_kg: Math.round(volumetric * 100) / 100,
+        chargeable_weight_kg: Math.round(chargeable * 100) / 100,
+        base_rate: Math.round(base),
+        fuel_surcharge: Math.round(fuel),
+        cold_chain_surcharge: Math.round(cold),
+        express_multiplier: multiplier,
+        total_shipping_cost: Math.round(total),
+        estimated_transit_days: Number(data.estimated_transit_days ?? (payload.is_express ? 1 : 2)),
+      };
     } catch {
       const volumetric = (payload.length_cm * payload.width_cm * payload.height_cm) / 5000;
       const chargeable = Math.max(payload.actual_weight_kg, volumetric, 1);

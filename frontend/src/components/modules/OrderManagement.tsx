@@ -348,7 +348,7 @@ export function OrderManagement() {
                     </span>
                   </td>
                   <td className="py-3.5 px-4 font-mono font-medium">
-                    Rp {order.total_amount.toLocaleString()}
+                    Rp {(order.total_amount ?? 0).toLocaleString()}
                   </td>
                   <td className="py-3.5 px-4 font-mono text-muted-foreground">
                     {order.total_weight_kg} kg
@@ -461,7 +461,7 @@ export function OrderManagement() {
                     <div className="text-right">
                       <p className="font-mono font-bold text-foreground">{item.quantity} units</p>
                       <p className="text-[11px] text-muted-foreground">
-                        Rp {(item.quantity * item.unit_price).toLocaleString()}
+                        Rp {((item.quantity || 0) * (item.unit_price || 0)).toLocaleString()}
                       </p>
                     </div>
                   </div>
