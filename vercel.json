@@ -3,6 +3,16 @@
   "buildCommand": "cd frontend && pnpm build && cp -r .vercel ../",
   "outputDirectory": ".vercel/output",
   "installCommand": "pnpm install --no-frozen-lockfile && cd frontend && pnpm install",
+  "rewrites": [
+    {
+      "source": "/api/v1/:path*",
+      "destination": "/api/v1/[...slug]"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "/api/[...path]"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
