@@ -48,8 +48,12 @@ export function OrderManagement() {
   }, []);
 
   const loadOrders = async () => {
-    const list = await LogisticsApi.listOrders();
-    setOrders(list);
+    try {
+      const list = await LogisticsApi.listOrders();
+      setOrders(Array.isArray(list) ? list : []);
+    } catch {
+      setOrders([]);
+    }
   };
 
   const handleRowClick = (order: SalesOrder) => {
@@ -188,7 +192,7 @@ export function OrderManagement() {
     }
   };
 
-  const filteredOrders = orders.filter((o) => {
+  const filteredOrders = (orders || []).filter((o) => {
     const matchesStatus = statusFilter === 'ALL' || o.status === statusFilter;
     const matchesSearch =
       o.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||

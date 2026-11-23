@@ -46,15 +46,21 @@ export function WarehouseHub() {
   }, [selectedWarehouseId]);
 
   const loadWarehouseData = async () => {
-    const whs = await LogisticsApi.listWarehouses();
-    setWarehouses(whs);
-    const stocks = await LogisticsApi.listInventory(selectedWarehouseId);
-    setInventory(stocks);
-    const auditList = await LogisticsApi.listOpnames();
-    setOpnames(auditList);
+    try {
+      const whs = await LogisticsApi.listWarehouses();
+      setWarehouses(Array.isArray(whs) ? whs : []);
+      const stocks = await LogisticsApi.listInventory(selectedWarehouseId);
+      setInventory(Array.isArray(stocks) ? stocks : []);
+      const auditList = await LogisticsApi.listOpnames();
+      setOpnames(Array.isArray(auditList) ? auditList : []);
+    } catch {
+      setWarehouses([]);
+      setInventory([]);
+      setOpnames([]);
+    }
   };
 
-  const currentWarehouse = warehouses.find((w) => w.id === selectedWarehouseId);
+  const currentWarehouse = (warehouses || []).find((w) => w.id === selectedWarehouseId);
 
   const handleCreateSku = async (e: React.FormEvent) => {
     e.preventDefault();

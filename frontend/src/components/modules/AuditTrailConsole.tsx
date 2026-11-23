@@ -22,22 +22,27 @@ export function AuditTrailConsole() {
 
   const loadAudit = async () => {
     setLoading(true);
-    const data = await LogisticsApi.listAuditTrail();
-    setLogs(data);
-    setLoading(false);
+    try {
+      const data = await LogisticsApi.listAuditTrail();
+      setLogs(Array.isArray(data) ? data : []);
+    } catch {
+      setLogs([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const filteredLogs = logs.filter((log) => {
-    const matchesAction = filterAction === 'ALL' || log.action.includes(filterAction);
+  const filteredLogs = (logs || []).filter((log) => {
+    const matchesAction = filterAction === 'ALL' || (log.action || '').includes(filterAction);
     const matchesSearch =
-      log.actor_name.toLowerCase().includes(search.toLowerCase()) ||
-      log.resource_id.toLowerCase().includes(search.toLowerCase()) ||
-      log.action.toLowerCase().includes(search.toLowerCase()) ||
-      log.hash_signature.toLowerCase().includes(search.toLowerCase());
+      (log.actor_name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (log.resource_id || '').toLowerCase().includes(search.toLowerCase()) ||
+      (log.action || '').toLowerCase().includes(search.toLowerCase()) ||
+      (log.hash_signature || '').toLowerCase().includes(search.toLowerCase());
     return matchesAction && matchesSearch;
   });
 
-  const sodViolations = logs.filter((l) => l.action.includes('SOD_VIOLATION'));
+  const sodViolations = (logs || []).filter((l) => (l.action || '').includes('SOD_VIOLATION'));
 
   return (
     <div className="space-y-6">

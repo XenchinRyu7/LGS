@@ -38,9 +38,14 @@ export function FleetDispatch() {
   }, []);
 
   const loadFleet = async () => {
-    const res = await LogisticsApi.listFleet();
-    setVehicles(res.vehicles);
-    setDrivers(res.drivers);
+    try {
+      const res = await LogisticsApi.listFleet();
+      setVehicles(Array.isArray(res?.vehicles) ? res.vehicles : []);
+      setDrivers(Array.isArray(res?.drivers) ? res.drivers : []);
+    } catch {
+      setVehicles([]);
+      setDrivers([]);
+    }
   };
 
   const handleCreateVehicle = async (e: React.FormEvent) => {

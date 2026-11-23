@@ -125,7 +125,7 @@ export function TrackingConsole() {
 
             {/* Timeline Events */}
             <div className="space-y-6 pl-4 border-l-2 border-border relative">
-              {trackingData.events.map((ev, idx) => (
+              {(trackingData.events || []).map((ev, idx) => (
                 <div key={ev.event_id} className="relative group">
                   {/* Timeline bullet dot */}
                   <div className="absolute -left-[23px] top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">

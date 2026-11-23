@@ -158,6 +158,7 @@ const INITIAL_INVENTORY = [
 ];
 
 let ordersStore: Array<{
+  id: string;
   order_id: string;
   order_number: string;
   customer_id: string;
@@ -177,6 +178,7 @@ let ordersStore: Array<{
   updated_at: string;
 }> = [
   {
+    id: '8a1f2e34-5b6c-4d7e-8f9a-0b1c2d3e4f5a',
     order_id: '8a1f2e34-5b6c-4d7e-8f9a-0b1c2d3e4f5a',
     order_number: 'ORD-2026-00491',
     customer_id: 'CUST-KIMIA-FARMA',
@@ -215,6 +217,7 @@ let ordersStore: Array<{
     updated_at: new Date(Date.now() - 3600000).toISOString(),
   },
   {
+    id: '9b2f3e45-6c7d-5e8f-9a0b-1c2d3e4f5a6b',
     order_id: '9b2f3e45-6c7d-5e8f-9a0b-1c2d3e4f5a6b',
     order_number: 'ORD-2026-00492',
     customer_id: 'CUST-TELKOM-SIG',
@@ -253,6 +256,7 @@ let ordersStore: Array<{
     updated_at: new Date(Date.now() - 1800000).toISOString(),
   },
   {
+    id: 'ac3f4e56-7d8e-6f9a-0b1c-2d3e4f5a6b7c',
     order_id: 'ac3f4e56-7d8e-6f9a-0b1c-2d3e4f5a6b7c',
     order_number: 'ORD-2026-00493',
     customer_id: 'CUST-BARATA-IND',
@@ -295,6 +299,7 @@ let ordersStore: Array<{
 let fleetStore = {
   vehicles: [
     {
+      id: 'VEH-EV-01',
       vehicle_id: 'VEH-EV-01',
       license_plate: 'B 9201 ELG',
       vehicle_type: 'ElectricRefrigeratedVan',
@@ -302,11 +307,13 @@ let fleetStore = {
       current_payload_kg: 40.0,
       status: 'Active',
       fuel_battery_percent: 88,
+      fuel_battery_level_percent: 88,
       odometer_km: 14250.0,
       current_lat: -6.2088,
       current_lng: 106.8456,
     },
     {
+      id: 'VEH-TRK-02',
       vehicle_id: 'VEH-TRK-02',
       license_plate: 'B 9844 UXZ',
       vehicle_type: 'HeavyDutyTruck',
@@ -314,6 +321,7 @@ let fleetStore = {
       current_payload_kg: 8500.0,
       status: 'InTransit',
       fuel_battery_percent: 74,
+      fuel_battery_level_percent: 74,
       odometer_km: 84210.0,
       current_lat: -6.9175,
       current_lng: 107.6191,
@@ -321,6 +329,7 @@ let fleetStore = {
   ],
   drivers: [
     {
+      id: 'DRV-001',
       driver_id: 'DRV-001',
       name: 'Bambang Pamungkas',
       phone: '+62 812-9988-7766',
@@ -332,6 +341,7 @@ let fleetStore = {
       fatigue_warning: false,
     },
     {
+      id: 'DRV-002',
       driver_id: 'DRV-002',
       name: 'Agus Setiawan',
       phone: '+62 813-4455-6677',
@@ -657,6 +667,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
           const dbRes = await pool.query(query, params);
           if (dbRes.rows.length > 0) {
             const mapped = dbRes.rows.map((row) => ({
+              id: row.order_id,
               order_id: row.order_id,
               order_number: row.order_number,
               customer_id: row.customer_id,
@@ -696,8 +707,10 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     if (pathname === '/orders' && method === 'POST') {
       const body = await parseBody(req);
+      const orderId = crypto.randomUUID();
       const newOrder = {
-        order_id: crypto.randomUUID(),
+        id: orderId,
+        order_id: orderId,
         order_number: `ORD-2026-${Math.floor(10000 + Math.random() * 90000)}`,
         customer_id: body.customer_id || 'CUST-GENERAL',
         customer_name: body.customer_name || 'Corporate Client',
@@ -791,14 +804,17 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     if (pathname === '/fleet/vehicles' && method === 'POST') {
       const body = await parseBody(req);
+      const vehicleId = body.vehicle_id || `VEH-${Date.now().toString().slice(-4)}`;
       const newVeh = {
-        vehicle_id: body.vehicle_id || `VEH-${Date.now().toString().slice(-4)}`,
+        id: vehicleId,
+        vehicle_id: vehicleId,
         license_plate: body.license_plate || 'B 1234 XYZ',
         vehicle_type: body.vehicle_type || 'ElectricRefrigeratedVan',
         max_payload_kg: Number(body.max_payload_kg) || 2000.0,
         current_payload_kg: 0.0,
         status: 'Active',
         fuel_battery_percent: 100,
+        fuel_battery_level_percent: 100,
         odometer_km: 0.0,
         current_lat: -6.2088,
         current_lng: 106.8456,
@@ -809,8 +825,10 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     if (pathname === '/fleet/drivers' && method === 'POST') {
       const body = await parseBody(req);
+      const driverId = body.driver_id || `DRV-${Date.now().toString().slice(-3)}`;
       const newDrv = {
-        driver_id: body.driver_id || `DRV-${Date.now().toString().slice(-3)}`,
+        id: driverId,
+        driver_id: driverId,
         name: body.name || 'Driver Name',
         phone: body.phone || '+62 812-0000-0000',
         license_type: body.license_type || 'SIM B2 Umum',
@@ -828,15 +846,58 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     if (pathname.startsWith('/tracking/') && method === 'GET') {
       const trackingNumber = pathname.replace('/tracking/', '');
       const order = ordersStore.find((o) => o.tracking_number === trackingNumber) || ordersStore[0];
+      const events = [
+        {
+          event_id: 'ev-1',
+          tracking_number: trackingNumber,
+          status: 'OrderCreated',
+          location_name: 'Jakarta Central Hub',
+          description: 'Sales Order placed and validated',
+          timestamp: new Date(Date.now() - 3600000 * 4).toISOString(),
+        },
+        {
+          event_id: 'ev-2',
+          tracking_number: trackingNumber,
+          status: 'InventoryReserved',
+          location_name: 'Jakarta Central Cryo Vault',
+          description: 'Biopharmaceutical stock locked in vault (-20.4°C verified)',
+          timestamp: new Date(Date.now() - 3600000 * 3).toISOString(),
+        },
+        {
+          event_id: 'ev-3',
+          tracking_number: trackingNumber,
+          status: 'InTransit',
+          location_name: 'Jl. Rasuna Said, Jakarta',
+          description: 'En route with electric refrigerated carrier VEH-EV-01',
+          timestamp: new Date(Date.now() - 3600000).toISOString(),
+        },
+      ];
       return sendJson(res, 200, {
         tracking_number: trackingNumber,
         order_number: order.order_number,
+        recipient_name: order.delivery_address?.recipient_name || 'Dr. Hendra Gunawan',
+        destination_city: order.delivery_address?.city || 'Jakarta',
         current_status: order.status,
         service_tier: order.service_tier,
+        events,
+        timeline: events,
+        live_telemetry: {
+          tracking_number: trackingNumber,
+          vehicle_id: 'VEH-EV-01',
+          driver_name: 'Bambang Pamungkas',
+          latitude: -6.2088,
+          longitude: 106.8456,
+          speed_kmh: 42.5,
+          heading_degrees: 148,
+          temperature_celsius: -20.2,
+          battery_fuel_percent: 88,
+          eta_minutes: 24,
+          timestamp: new Date().toISOString(),
+        },
         cold_chain_telemetry: {
-          temperature_c: -19.4,
+          temperature_c: -20.2,
           humidity_percent: 45,
-          battery_percent: 92,
+          battery_percent: 88,
           sensor_health: 'NORMAL',
           last_telemetry_at: new Date().toISOString(),
         },
@@ -844,26 +905,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
           latitude: -6.2088,
           longitude: 106.8456,
         },
-        timeline: [
-          {
-            stage: 'OrderCreated',
-            description: 'Sales Order placed by customer',
-            timestamp: new Date(Date.now() - 3600000 * 4).toISOString(),
-            location: 'Jakarta Hub',
-          },
-          {
-            stage: 'InventoryReserved',
-            description: 'Biopharmaceutical stock locked in cold vault CC-RACK-01',
-            timestamp: new Date(Date.now() - 3600000 * 3).toISOString(),
-            location: 'Jakarta Central Hub',
-          },
-          {
-            stage: 'InTransit',
-            description: 'En route with electric refrigerated carrier VEH-EV-01',
-            timestamp: new Date(Date.now() - 3600000).toISOString(),
-            location: 'Jl. Rasuna Said, Jakarta',
-          },
-        ],
+        estimated_delivery: new Date(Date.now() + 2 * 3600 * 1000).toISOString(),
       });
     }
 

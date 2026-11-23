@@ -43,8 +43,12 @@ export function FinanceLedger() {
   }, []);
 
   const loadInvoices = async () => {
-    const list = await LogisticsApi.listInvoices();
-    setInvoices(list);
+    try {
+      const list = await LogisticsApi.listInvoices();
+      setInvoices(Array.isArray(list) ? list : []);
+    } catch {
+      setInvoices([]);
+    }
   };
 
   const handleCalculate = async () => {
