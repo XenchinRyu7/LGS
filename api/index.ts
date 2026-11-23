@@ -541,12 +541,25 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     // 4. Analytics Overview
     if (pathname === '/analytics/overview' && method === 'GET') {
       return sendJson(res, 200, {
-        total_revenue_idr: 1250000000,
-        active_shipments: 42,
-        on_time_delivery_rate: 98.4,
-        avg_fleet_efficiency: 94.2,
-        warehouse_capacity_utilization: 76.5,
-        total_orders_today: 18,
+        metrics: {
+          total_orders_today: ordersStore.length + 142,
+          active_shipments_in_transit: 21,
+          on_time_delivery_rate_percent: 98.4,
+          fleet_utilization_percent: 87.5,
+          warehouse_utilization_percent: 74.2,
+          total_revenue_today: 1292500000,
+          average_fulfillment_time_hours: 3.4,
+          temperature_breaches_cold_chain: 0,
+        },
+        throughput: [
+          { label: '06:00', value: 14, secondary: 8 },
+          { label: '08:00', value: 45, secondary: 22 },
+          { label: '10:00', value: 88, secondary: 64 },
+          { label: '12:00', value: 120, secondary: 95 },
+          { label: '14:00', value: 165, secondary: 130 },
+          { label: '16:00', value: 210, secondary: 185 },
+          { label: '18:00', value: 248, secondary: 232 },
+        ],
       });
     }
 

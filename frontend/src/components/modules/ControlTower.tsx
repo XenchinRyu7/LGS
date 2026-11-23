@@ -20,11 +20,21 @@ export function ControlTower() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    LogisticsApi.getExecutiveOverview().then((res) => {
-      setMetrics(res.metrics);
-      setThroughput(res.throughput);
-      setLoading(false);
-    });
+    let mounted = true;
+    LogisticsApi.getExecutiveOverview()
+      .then((res) => {
+        if (!mounted) return;
+        setMetrics(res?.metrics || null);
+        setThroughput(res?.throughput || []);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   if (loading || !metrics) {
