@@ -6,6 +6,7 @@ node_modules/
 dist/
 build/
 .astro/
+.vercel/
 
 # Rust targets
 target/
