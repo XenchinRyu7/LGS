@@ -38,3 +38,5 @@ coverage/
 
 preview.md
 theming.md
+.vercel
+.env*
